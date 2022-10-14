@@ -24,7 +24,7 @@
 #include "InputParser.h"
 
 #ifdef _WIN32
-#include "Server.h"
+//#include "Server.h"
 #endif
 
 
@@ -234,7 +234,7 @@ void precalc_all(bool do_target, std::string target)
 void run_server(DiceRoller& helper)
 {
 #ifdef _WIN32
-    DTServer server{ 80, helper};
+    //DTServer server{ 80, helper};
 #endif
 }
 
@@ -430,7 +430,11 @@ void commandLineCalculation(const InputParser & parser)
         
         const std::string & dice_s = parser.getCmdOption("-dice");
         size_t ndice = dice_s.size();
-        size_t max_input = min((size_t)5, ndice);
+        size_t max_input =  ndice;
+        if (max_input > 5)
+        {
+            max_input = 5;
+        }
         for (size_t i = 0; i < max_input; i++)
         {
             dice[i] = ((DiceIdx)(dice_s[i] - '0'))-1;
@@ -614,7 +618,7 @@ int main(int argc, char* argv[])
     //sim4.test_odds_calc_chase();
     //sim4.combo_test();
     //sim.get_default_probability("Barbarian", false, false, false, false, false, 0, 0);
-    run_server(droller);
+    //run_server(droller);
     std::cout << "server stopped\n";
     return 0;
 }
