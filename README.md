@@ -9,3 +9,5 @@ contains lots of unrecommended/old code, just to show 4 different ways to calcul
 
 Python Gui:
 ![python gui](/assets/images/GUI.jpg)
+
+numbers in brackets are the dice you have to reroll for maximized odds.
