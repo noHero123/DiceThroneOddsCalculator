@@ -6,3 +6,6 @@ contains lots of unrecommended/old code, just to show 4 different ways to calcul
 - MCTS (Monte Carlo Tree Search)
 - brute force
 - markov chains (inspired from https://math.stackexchange.com/questions/4032313/probability-of-yahtzee-straight-with-strict-re-roll-rules) (currently preffered way)
+
+Python Gui:
+![python gui](/assets/images/GUI.jpg)
