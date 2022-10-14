@@ -1,4 +1,4 @@
-## dice throne odds calculator
+## Dice Throne Odds Calculator
 thanks to Assassinater for his python gui.<br />
 to build from source you need boost, eigen and sqlite3.<br /><br />
 contains lots of unrecommended/old code, just to show 4 different ways to calculate the odds:
@@ -11,3 +11,8 @@ Python Gui:
 ![python gui](/assets/images/GUI.jpg)
 
 numbers in brackets are the dice you have to reroll for maximized odds.
+
+### Installation:
+- download latest release from: https://github.com/noHero123/DiceThroneOddsCalculator/releases and extract it.
+- (optional) if you want to use the odds calculator for DTA, also download the precomputed database from https://github.com/noHero123/DiceThroneOddsCalculator/releases/tag/1.0.0_DTA and extract it to the same folder like the stuff from first step.
+- start odds_calc.exe
