@@ -603,7 +603,7 @@ int main(int argc, char* argv[])
         //do_precalc("AAABBC", "SMALL"); //test
         //writeTxtToDB("precalcs4", "DiceThroneOdds4.db");
     }
-    DiceRoller droller{ 5000ULL };
+    DiceRoller droller{ 5000000ULL };
     std::cout << "testing stuff" << std::endl;
     
     Simulator sim(droller);
@@ -611,14 +611,14 @@ int main(int argc, char* argv[])
     //sim.diceRoller_ = &(helper.diceRoller_);
     //sim.test_odds_calc();
     //sim.test_odds_calc_chase();
-    //sim.combo_test();
+    sim.combo_test();
     std::cout << "combo test 4 ######################################" << std::endl;
     //sim4.combo_test();
     sim4.test_odds_calc();
     //sim4.test_odds_calc_chase();
     //sim4.combo_test();
     //sim.get_default_probability("Barbarian", false, false, false, false, false, 0, 0);
-    //run_server(droller);
+    run_server(droller);
     std::cout << "server stopped\n";
     return 0;
 }

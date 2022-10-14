@@ -1743,7 +1743,7 @@ std::vector<bool> Simulator4::createMarkovChainSolverEigenRow(const std::vector<
         eigen_markovMatrix = eigen_markovMatrix * eigen_LastMatrix;
     }
     // calculate Matrix ^ rerolls
-    for (size_t i = 0; i < roll_atempts; i++)
+    for (size_t i = 0; i < rerolls; i++)
     {
         eigen_markovMatrix = eigen_markovMatrix * eigen_rerollMatrix;
     }

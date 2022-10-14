@@ -303,7 +303,7 @@ DiceIdx Simulator::get_random_fast()
 
 std::vector<bool> Simulator::test_all_rolls(const std::vector<DiceIdx>& org_dice, size_t roll_atemps, size_t rerolls, bool is_default_sim, float & erg_odd)
 {
-    size_t fast_sims = 50000;
+    size_t fast_sims = 500000;
     size_t normal_sims = 750000;
     size_t large_sims = 1000000;
     size_t done_simuls = 0U;
@@ -341,11 +341,11 @@ std::vector<bool> Simulator::test_all_rolls(const std::vector<DiceIdx>& org_dice
             {
                 std::vector<bool> bits = Helpers::getBitArray(i, number_dice_);
                 size_t erg = combo_sim_ultra_faster_reroll_DT(org_dice, bits, tmp_roll_at, tmp_rerolls, is_default_sim);
-                /*for (auto b : bits)
+                for (auto b : bits)
                 {
                     std::cout << b ? "1" : "0";
                 }
-                std::cout << " prob for " << i<< " is " << erg << "%" << std::endl;*/
+                std::cout << " prob for " << i<< " is " << (100.0F*erg) / ((float)(fast_sims)) << "%" << std::endl;
                 if (erg > best_erg)
                 {
                     best_erg = erg;
@@ -2623,7 +2623,7 @@ std::vector<bool> Simulator::createMarkovChainSolverEigenRow(const std::vector<D
         eigen_markovMatrix = eigen_markovMatrix * eigen_LastMatrix;
     }
     // calculate Matrix ^ rerolls
-    for (size_t i = 0; i < roll_atempts; i++)
+    for (size_t i = 0; i < rerolls; i++)
     {
         eigen_markovMatrix = eigen_markovMatrix * eigen_rerollMatrix;
     }
@@ -2665,13 +2665,13 @@ void Simulator::combo_test()
 {
     //test_random_gens();
     bool test_read_and_calc = false;
-    std::vector<DiceIdx> org_dice{ 0,1,3,4,0 };
+    std::vector<DiceIdx> org_dice{ 4,4,4,4,2 };
     //org_dice = { 0,1,2,4,4 };
-    std::string ability = "SMALL";
+    std::string ability = "BBBBB";
     std::string diceanatomy = "AAABBC";
-    size_t roll_atemps = 1;
-    size_t rerolls = 6;
-    bool is_default_sim = true;
+    size_t roll_atemps = 0;
+    size_t rerolls = 3;
+    bool is_default_sim = false;
 
     
 
@@ -2779,10 +2779,11 @@ void Simulator::combo_test()
 
     start_time = std::chrono::high_resolution_clock::now();
     //ergo = createMarkovChain(org_dice, is_default_sim, roll_atemps, rerolls);
-    best_reroll = createMarkovChainSolverEigen(org_dice, is_default_sim, roll_atemps, rerolls, diceanatomy, ability, cards, ergo);
+    best_reroll = createMarkovChainSolverEigenRow(org_dice, is_default_sim, roll_atemps, rerolls, diceanatomy, ability, cards, ergo);
     end_time = std::chrono::high_resolution_clock::now();
     time = end_time - start_time;
     std::cout << "markov Eigen took " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds for " << ability_name << " result " << ergo << std::endl << std::endl;
+    std::cout << "best reroll " << best_reroll[0] << best_reroll[1] << best_reroll[2] << best_reroll[3] << best_reroll[4] << std::endl << std::endl;
 
     start_time = std::chrono::high_resolution_clock::now();
     ergo = createMarkovChain(org_dice, is_default_sim, roll_atemps, rerolls);
