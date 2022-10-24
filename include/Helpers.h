@@ -31,7 +31,6 @@ public:
         {
             path = "DiceThroneOdds4.db";
         }
-
         if (path != last_db_path || db == nullptr)
         {
             closeDB();

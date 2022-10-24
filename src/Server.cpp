@@ -135,49 +135,30 @@ void DTServer::on_client_connect(SOCKET client)
 		{
 			hero_name = value;
 		}
-		if (key == "dice1")
+		if (key == "rerolls")
 		{
-			dice[0] = max(std::stoi(value) - 1, 0);
+			rerolls = stoi(value);
 		}
-		if (key == "dice2")
+		if (key == "atmps")
 		{
-			dice[1] = max(std::stoi(value) - 1, 0);
+			rollattempts = stoi(value);
 		}
-		if (key == "dice3")
+		if (key == "dice")
 		{
-			dice[2] = max(std::stoi(value) - 1, 0);
+			for (size_t i = 0; i < value.size(); i++)
+			{
+				dice[i] = max((value[i]-'1'), 0); // -'1' because our dice are numbered from 0 - 5
+			}
 		}
-		if (key == "dice4")
+		
+		if (key == "cards")
 		{
-			dice[3] = max(std::stoi(value) - 1, 0);
-		}
-		if (key == "dice5")
-		{
-			dice[4] = max(std::stoi(value) - 1, 0);
-		}
-		if (key == "sixit")
-		{
-			sixit = std::stoi(value);
-		}
-		if (key == "tipit")
-		{
-			tipit = std::stoi(value);
-		}
-		if (key == "samesis")
-		{
-			samesis = std::stoi(value);
-		}
-		if (key == "wild")
-		{
-			wild = std::stoi(value);
-		}
-		if (key == "twicewild")
-		{
-			twiceWild = std::stoi(value);
-		}
-		if (key == "slightlywild")
-		{
-			slightlyWild = std::stoi(value);
+			sixit = value[0] - '0';
+			samesis = value[1] - '0';
+			tipit = value[2] - '0';
+			wild = value[3] - '0';
+			twiceWild = value[4] - '0';
+			slightlyWild = value[5] - '0';
 		}
 		if (key == "cp")
 		{

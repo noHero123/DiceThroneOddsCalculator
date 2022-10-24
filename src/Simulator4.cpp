@@ -2358,7 +2358,7 @@ bool Simulator4::read_ability(std::string ability_name, std::string diceanatomy,
     }
     size_t m_cp = std::min(cp, maxcp);
     size_t m_cards = std::min(numbercards, max_cards);
-    if (max_cards == 0)
+    if (m_cards == 0)
     {
         //we didnt save 0,0,0,0,0, 
         // we calculated 1,0,0,0,0 0 1 = sixit active, but zero cp, and 1 card

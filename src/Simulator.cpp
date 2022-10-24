@@ -3233,7 +3233,7 @@ bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, 
     }
     size_t m_cp = std::min(cp, maxcp);
     size_t m_cards = std::min(numbercards, max_cards);
-    if (max_cards == 0)
+    if (m_cards == 0)
     {
         //we didnt save 0,0,0,0,0, 
         // we calculated 1,0,0,0,0 0 1 = sixit active, but zero cp, and 1 card
@@ -3255,6 +3255,7 @@ bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, 
             break;
         }
     }
+    //std::cout << table_name << " " << searched_line << std::endl;
     std::string sqlite_data = helper.sqlite_get_data(table_name, searched_line, isDTA);
     if (sqlite_data == "")
     {

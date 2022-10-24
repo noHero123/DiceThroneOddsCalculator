@@ -24,7 +24,7 @@
 #include "InputParser.h"
 
 #ifdef _WIN32
-//#include "Server.h"
+#include "Server.h"
 #endif
 
 
@@ -234,7 +234,7 @@ void precalc_all(bool do_target, std::string target)
 void run_server(DiceRoller& helper)
 {
 #ifdef _WIN32
-    //DTServer server{ 80, helper};
+    DTServer server{ 80, helper};
 #endif
 }
 
@@ -593,6 +593,7 @@ int main(int argc, char* argv[])
         return 0;
     }
     bool docalcs = false;
+    bool do_tests = false;
     if (docalcs)
     {
         precalc_all(false, "");
@@ -603,21 +604,25 @@ int main(int argc, char* argv[])
         //do_precalc("AAABBC", "SMALL"); //test
         //writeTxtToDB("precalcs4", "DiceThroneOdds4.db");
     }
-    DiceRoller droller{ 5000000ULL };
-    std::cout << "testing stuff" << std::endl;
-    
-    Simulator sim(droller);
-    Simulator4 sim4(droller);
-    //sim.diceRoller_ = &(helper.diceRoller_);
-    //sim.test_odds_calc();
-    //sim.test_odds_calc_chase();
-    sim.combo_test();
-    std::cout << "combo test 4 ######################################" << std::endl;
-    //sim4.combo_test();
-    sim4.test_odds_calc();
-    //sim4.test_odds_calc_chase();
-    //sim4.combo_test();
-    //sim.get_default_probability("Barbarian", false, false, false, false, false, 0, 0);
+    DiceRoller droller{ 5000ULL };
+    if (do_tests)
+    {
+        
+        std::cout << "testing stuff" << std::endl;
+
+        Simulator sim(droller);
+        Simulator4 sim4(droller);
+        //sim.diceRoller_ = &(helper.diceRoller_);
+        //sim.test_odds_calc();
+        //sim.test_odds_calc_chase();
+        sim.combo_test();
+        std::cout << "combo test 4 ######################################" << std::endl;
+        //sim4.combo_test();
+        sim4.test_odds_calc();
+        //sim4.test_odds_calc_chase();
+        //sim4.combo_test();
+        //sim.get_default_probability("Barbarian", false, false, false, false, false, 0, 0);
+    }
     run_server(droller);
     std::cout << "server stopped\n";
     return 0;
