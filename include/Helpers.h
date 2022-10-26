@@ -205,11 +205,6 @@ public:
             diceanatomy = "AAABBC";
             abilities = { "AAA", "AAAA", "AAAAA", "BBB", "AAACC", "BBBC", "CCCC", "CCCCC", "CCC", "AACC", "ABCC", "ABB", "AAC" };
         }
-        if (hero_name == "Vampire Lord")
-        {
-            diceanatomy = "AAABBC";
-            abilities = { "AAA", "AAAA", "AAAAA", "BBB", "AAACC", "BBBC", "CCCC", "CCCCC", "CCC", "AACC", "ABCC", "ABB", "AAC" };
-        }
         if (hero_name == "Gunslinger")
         {
             diceanatomy = "AAABBC";
@@ -228,7 +223,7 @@ public:
         if (hero_name == "Treant")
         {
             diceanatomy = "AAABBC";
-            abilities = { "AAA", "AAAA", "AAAAA", "BBCC", "AABBB","AACC", "ABB", "BBB", "AACC", "CCCC", "CCC","CCCCC" };
+            abilities = { "AAA", "AAAA", "AAAAA", "BBCC", "AABBB","AACC", "ABB", "BBB", "CCCC", "CCC","CCCCC" };
         }
         //marvel
         if (hero_name == "Captain Marvel")
@@ -246,10 +241,15 @@ public:
             diceanatomy = "AAABBC";
             abilities = { "AAA", "AAAA", "AAAAA", "ABBC", "AACC","AABBB", "AAACC", "BBB", "CCCC", "CCC", "CCCCC" };
         }
-        if (hero_name == "Spider-Man")
+        if (hero_name == "Spider-Man" || hero_name == "Spider Man")
         {
             diceanatomy = "AAABBC";
             abilities = { "AAA", "AAAA", "AAAAA", "AABBB", "AACC","ABBC", "CCCC", "CCCCC", "CCC", "BBC" };
+        }
+        if (hero_name == "Santa")
+        {
+            diceanatomy = "AAABBC";
+            abilities = { "AAA","AAAA","AAAAA","BBBCC", "CCCC", "BBBB", "AABBC", "AABB", "CCC", "CCCCC"};
         }
 
         if (hero_name == "Seraph")
@@ -266,6 +266,11 @@ public:
         {
             diceanatomy = "AAABCD";
             abilities = { "AAA", "AAAA", "AAAAA", "AABB", "CC","ABCD", "ADDD", "DDDD", "DDD", "BBC", "AAC" };
+        }
+        if (hero_name == "Krampus")
+        {
+            diceanatomy = "AAABCD";
+            abilities = { "AAA","AAAA","AAAAA","CCC", "DDDD", "ABCD", "AABB", "DDDDD","DDD", "AAAC"};
         }
 
         if (hero_name == "Black Widow")
@@ -287,7 +292,7 @@ public:
         if (hero_name == "Paladin")
         {
             diceanatomy = "AABBCD";
-            abilities = { "CC", "BBBD", "AAABB","AAAD", "DDDD", "DDDDD", "AAC", "AAB", "ABCD", "DDD" };
+            abilities = { "CC", "BBBD", "AAABB","AAAD", "DDDD", "DDDDD", "AAD", "AAB", "ABCD", "DDD" };
         }
         if (hero_name == "Dr Strange")
         {
