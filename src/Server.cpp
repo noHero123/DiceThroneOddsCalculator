@@ -110,7 +110,6 @@ void DTServer::on_client_connect(SOCKET client)
 	size_t anzcards = 0;
 	size_t rollattempts = 0;
 	size_t rerolls = 0;
-	bool last_die_is_scarlett = false;
 	bool is_default_sim = false;
 	bool is_chase = false;
 	std::string chase_ability = "";
@@ -167,6 +166,19 @@ void DTServer::on_client_connect(SOCKET client)
 		if (key == "maxcards")
 		{
 			anzcards = std::stoi(value);
+		}
+		if (key == "scarlet")
+		{
+			int val = std::stoi(value);
+			if (val == 1)
+			{
+				scarlett_die = true;
+			}
+		}
+		if (key == "chased")
+		{
+			is_chase = true;
+			chase_ability = value;
 		}
 	}
 
