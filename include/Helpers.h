@@ -270,7 +270,7 @@ public:
         if (hero_name == "Krampus")
         {
             diceanatomy = "AAABCD";
-            abilities = { "AAA","AAAA","AAAAA","CCC", "DDDD", "ABCD", "AABB", "DDDDD","DDD", "AAAC"};
+            abilities = { "AAA","AAAA","AAAAA","CCC", "CC", "DDDD", "ABCD", "AABB", "DDDDD","DDD", "AAAC"};
         }
 
         if (hero_name == "Black Widow")
