@@ -52,6 +52,8 @@ struct CardData
 	size_t lvlwild = 0;
 	size_t lvltwiceWild = 0;
 	size_t lvlslightlyWild = 0;
+	size_t hasCheer = 0;
+	size_t numberProbabilityManipulation = 0;
 };
 
 struct Card

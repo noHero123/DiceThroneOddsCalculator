@@ -593,7 +593,7 @@ int main(int argc, char* argv[])
         return 0;
     }
     bool docalcs = false;
-    bool do_tests = false;
+    bool do_tests = true;
     if (docalcs)
     {
         precalc_all(false, "");

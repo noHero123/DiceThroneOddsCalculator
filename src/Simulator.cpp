@@ -34,7 +34,7 @@ Simulator::Simulator(DiceRoller& rg) : diceRoller_{rg} // diceRoller_{rg}
     for (size_t i = 0; i < 11; i++)
     {
         std::vector<Card> a1;
-        a1.resize(7);
+        a1.resize(10);
         card_store_.push_back(a1);
     }
     //all combs for samesis2:
@@ -1247,7 +1247,7 @@ std::vector<OddsResult> Simulator::oddsCalculator(std::vector<std::string> abili
     chase_data_.clear();
     int cp = cardData.cp;
     size_t use_max_cards = cardData.use_max_cards;
-    std::vector<Card> cards = Helpers::getCards(cardData.lvlsixit, cardData.lvlsamesis, cardData.lvltip_it, cardData.lvlwild, cardData.lvltwiceWild, cardData.lvlslightlyWild);
+    std::vector<Card> cards = Helpers::getCards(cardData.lvlsixit, cardData.lvlsamesis, cardData.lvltip_it, cardData.lvlwild, cardData.lvltwiceWild, cardData.lvlslightlyWild, cardData.numberProbabilityManipulation, cardData.hasCheer);
     
     auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -1309,7 +1309,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
     bool aggressive = false;
     int cp = cardData.cp;
     size_t use_max_cards = cardData.use_max_cards;
-    std::vector<Card> cards = Helpers::getCards(cardData.lvlsixit, cardData.lvlsamesis, cardData.lvltip_it, cardData.lvlwild, cardData.lvltwiceWild, cardData.lvlslightlyWild);
+    std::vector<Card> cards = Helpers::getCards(cardData.lvlsixit, cardData.lvlsamesis, cardData.lvltip_it, cardData.lvlwild, cardData.lvltwiceWild, cardData.lvlslightlyWild, cardData.numberProbabilityManipulation, cardData.hasCheer);
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -2665,9 +2665,9 @@ void Simulator::combo_test()
 {
     //test_random_gens();
     bool test_read_and_calc = false;
-    std::vector<DiceIdx> org_dice{ 4,4,4,4,2 };
+    std::vector<DiceIdx> org_dice{ 0,1,3,3,3 };
     //org_dice = { 0,1,2,4,4 };
-    std::string ability = "BBBBB";
+    std::string ability = "BIG";
     std::string diceanatomy = "AAABBC";
     size_t roll_atemps = 0;
     size_t rerolls = 3;
@@ -2683,7 +2683,7 @@ void Simulator::combo_test()
 
     //SMALL; 0 2; 2 3; 3 2; 5 3; 1 3
     int cp = 10;
-    size_t use_max_cards = 30;
+    size_t use_max_cards = 0;
 
     size_t sixit = 0;
     size_t samesis = 0;
@@ -2691,6 +2691,8 @@ void Simulator::combo_test()
     size_t wild = 0;
     size_t twiceWild = 0;
     size_t slightlyWild = 0;
+    size_t probManipulation = 2;
+    size_t cheer = 0;
 
     if (!is_default_sim)
     {
@@ -2733,7 +2735,7 @@ void Simulator::combo_test()
         ability_name += std::to_string(cp) + "CP";
     }
     
-    std::vector<Card> cards = Helpers::getCards(sixit, samesis, tip_it,  wild,  twiceWild,  slightlyWild); // TODO LVL OF CARDS
+    std::vector<Card> cards = Helpers::getCards(sixit, samesis, tip_it,  wild,  twiceWild,  slightlyWild, probManipulation, cheer); // TODO LVL OF CARDS
     // prepare + READ DATA #####################################################################################################################    
     
     solver_anatomy_ = Helpers::transformDiceAnatomy(diceanatomy);
@@ -3032,7 +3034,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     generator_target = target_ability;
     //calculate every card-combination
     std::vector<DiceIdx> stack;
-    size_t sampleCount = 6U;
+    size_t sampleCount = 8U;
     std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
     if (!isDTA)
     {
@@ -3042,7 +3044,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     std::vector<std::vector<DiceIdx>> erg2{};
     Helpers::getCombinations(options, sampleCount, stack, erg);
     erg.erase(erg.begin());
-    float max_anz = isDTA ? 48553.0F : 385.0F;
+    float max_anz = isDTA ? 6.0F * 48553.0F : 6.0F * 385.0F;
     int done_counter_anz = 0;
     // TODO CREATE FOLDER
     //filename = "./precalcs/" + ability_name + ".txt";
@@ -3125,13 +3127,21 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
         {
             continue;
         }
-        if (combi[5] > 2) //sixit
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
         {
             continue;
         }
         
         
-        std::vector<Card> cards = Helpers::getCards(combi[5], combi[1],  combi[2], combi[3],  combi[4],  combi[0]);
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1],  combi[2], combi[3],  combi[4],  combi[0], combi[5], combi[6]);
         
         size_t maxcp = 0;
         for (const auto& c : cards)
@@ -3475,6 +3485,39 @@ void Simulator::get_samessis2(const DiceThrow& dice, std::vector<DiceThrow>& sam
     }
 }
 
+void Simulator::get_probabilitymanipulations(const DiceThrow& dice, std::vector<DiceThrow>& tips, size_t save_idx)
+{
+    for (size_t i = 0; i < tipit_anz_; i++)
+    {
+        size_t idx = i / 2;
+        tips[i] = dice;
+        int manipulator = 1;
+        if (i % 2 == 1)
+        {
+            manipulator = -1;
+        }
+        if (dice.dice[idx] == 0  || dice.dice[idx] == 2 || dice.dice[idx] == 4 || dice.dice[idx] == 5 && manipulator == 1)
+        {
+            tips[i].success = false;
+            continue;
+        }
+
+        tips[i].success = true;
+        tips[i].manipula[save_idx].card = 2;
+        tips[i].manipula[save_idx].dice1val = dice.dice[idx];
+
+        tips[i].manipula[save_idx].dice1change = dice.dice[idx] + manipulator;
+
+
+        tips[i].rerollers[idx] = false;
+        tips[i].dice[idx] = dice.dice[idx] + manipulator;
+        if (tips[i].reroll_manipulation[idx] == 0)
+        {
+            tips[i].reroll_manipulation[idx] = -1;
+        }
+    }
+}
+
 void Simulator::get_tipits(const DiceThrow& dice, std::vector<DiceThrow>& tips, size_t save_idx)
 {
     for (size_t i = 0; i < tipit_anz_; i++)
@@ -3691,7 +3734,13 @@ int Simulator::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCa
         std::cout << "storeage to small" << std::endl;
         return -1;
     }
-    if ((useMaxCards == 0))
+    
+    size_t number_tokens = 0;
+    for (const auto& c : card_store_[current_combo_store_idx])
+    {
+        number_tokens += c.card_id >= 7 ? 1 : 0;
+    }
+    if ((useMaxCards == 0 && number_tokens == 0))
     {
         return -1;
     }
@@ -3750,6 +3799,11 @@ int Simulator::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCa
             {
                 anz = slightlywild_anz_;
                 get_slightlywilds(dice, wilds, current_combo_store_idx - 1);
+            }
+            if (card.function_to_call == 8)
+            {
+                anz = tipit_anz_;
+                get_probabilitymanipulations(dice, wilds, current_combo_store_idx - 1);
             }
             // mark unseccessfull
             for (size_t i = 0; i < anz; i++)
@@ -3813,17 +3867,36 @@ int Simulator::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCa
                     const auto& d1 = wilds[j];
                     if (d1.success)
                     {
-                        if (this->generator_target[0] < 7)
+                        if (card.card_id < 6)
                         {
-                            if (!fast_test(this->generator_target, d1, this->generator_anatomy, cards2, copycp, useMaxCards - 1))
+                            if (this->generator_target[0] < 7)
                             {
-                                continue;
+                                if (!fast_test(this->generator_target, d1, this->generator_anatomy, cards2, copycp, useMaxCards - 1))
+                                {
+                                    continue;
+                                }
+                            }
+                            int val = test_all_combis(d1, copycp, useMaxCards - 1, current_combo_store_idx);
+                            if (val >= 0)
+                            {
+                                return val;
                             }
                         }
-                        int val = test_all_combis(d1, copycp, useMaxCards - 1, current_combo_store_idx);
-                        if (val >= 0)
+                        else
                         {
-                            return val;
+                            // TOKEN (cardid 7 and 8)
+                            if (this->generator_target[0] < 7)
+                            {
+                                if (!fast_test(this->generator_target, d1, this->generator_anatomy, cards2, copycp, useMaxCards))
+                                {
+                                    continue;
+                                }
+                            }
+                            int val = test_all_combis(d1, copycp, useMaxCards, current_combo_store_idx);
+                            if (val >= 0)
+                            {
+                                return val;
+                            }
                         }
                     }
                 }
@@ -3834,7 +3907,7 @@ int Simulator::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCa
                 }
             }
             
-            if (card.function_to_call >= 1 && card.function_to_call<= 4)
+            if ((card.function_to_call >= 1 && card.function_to_call<= 4) || card.function_to_call == 8)
             {
                 // tipit and samesis depens on play-order
                 continue;
@@ -4060,7 +4133,7 @@ bool Simulator::fast_test(const std::vector<DiceIdx>& target, const DiceThrow& d
     }
     if (target_count > number_dice_)
     {
-        return false;
+        return false;// we have more symbols to roll then die available
     }
     for (size_t i = 0; i < number_dice_; i++)
     {
@@ -4080,11 +4153,13 @@ bool Simulator::fast_test(const std::vector<DiceIdx>& target, const DiceThrow& d
         return true;
     }
     size_t number_cards_available = 0;
+    size_t number_tokens = 0;
     for (const auto& c : cards)
     {
         number_cards_available += c.can_use ? 1 : 0;
+        number_tokens += c.card_id >= 7 ? 1:0;
     }
-    if (use_max_cards == 0 || cards.empty())
+    if (use_max_cards == 0 && number_tokens == 0 || cards.empty())
     {
         return false;
     }

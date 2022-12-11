@@ -66,6 +66,7 @@ public:
 	void get_tipits(const DiceThrow& dice, std::vector<DiceThrow>& tips, size_t save_idx);
 	void get_samessis2(const DiceThrow& dice, std::vector<DiceThrow>& samesis, size_t save_idx);
 	void get_wilds2(const DiceThrow& dice, std::vector<DiceThrow>& wilds, size_t save_idx);
+	void get_probabilitymanipulations(const DiceThrow& dice, std::vector<DiceThrow>& wilds, size_t save_idx);
 
 
 	DiceHash get_hash_smaller(const std::vector<DiceIdx>& v, size_t sides)

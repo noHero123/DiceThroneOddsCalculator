@@ -534,13 +534,29 @@ public:
                 }
             }
         }
+        if (name == "cheer")
+        {
+            c.card_id = 6;
+            c.lvl = 1;
+            c.cp_cost = 0;
+            c.function_to_call = 0;
+            c.dice_manipulateable = 1;
+        }
+        if (name == "probability manipulation")
+        {
+            c.card_id = 7;
+            c.lvl = 1;
+            c.cp_cost = 0;
+            c.function_to_call = 8;
+            c.dice_manipulateable = 1;
+        }
 
 
         c.can_use = true;
         return c;
     }
 
-    static std::vector<Card> getCards(size_t lvlsixit, size_t lvlsamesis, size_t lvlTip, size_t lvlWild, size_t lvlTaw, size_t lvlSwild)
+    static std::vector<Card> getCards(size_t lvlsixit, size_t lvlsamesis, size_t lvlTip, size_t lvlWild, size_t lvlTaw, size_t lvlSwild, size_t numberProbabilityManipulation, size_t has_cheer)
     {
         std::vector<Card> cards;
 
@@ -570,6 +586,16 @@ public:
         if (lvlSwild > 0)
         {
             cards.push_back(generateCard("slightly wild", lvlSwild));
+        }
+
+        for (size_t i = 0; i< numberProbabilityManipulation; i++)
+        {
+            cards.push_back(generateCard("probability manipulation", 1));
+        }
+
+        if (has_cheer > 0)
+        {
+            cards.push_back(generateCard("cheer", 1));
         }
 
         return cards;
