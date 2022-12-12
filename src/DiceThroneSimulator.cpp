@@ -408,6 +408,8 @@ void commandLineCalculation(const InputParser & parser)
     size_t wild = 0;
     size_t twiceWild = 0;
     size_t slightlyWild = 0;
+    size_t probabilityManipulation = 0;
+    size_t cheer = 0;
     size_t cp = 0;
     size_t anzcards = 0;
     size_t rollattempts = 3;
@@ -530,6 +532,16 @@ void commandLineCalculation(const InputParser & parser)
         const std::string& out_s = parser.getCmdOption("-swild");
         slightlyWild = std::stoi(out_s);
     }
+    if (parser.cmdOptionExists("-cheer"))
+    {
+        const std::string& out_s = parser.getCmdOption("-cheer");
+        slightlyWild = std::stoi(out_s);
+    }
+    if (parser.cmdOptionExists("-probabilitymanipulation"))
+    {
+        const std::string& out_s = parser.getCmdOption("-probabilitymanipulation");
+        slightlyWild = std::stoi(out_s);
+    }
     if (parser.cmdOptionExists("-cp"))
     {
         const std::string& out_s = parser.getCmdOption("-cp");
@@ -560,8 +572,20 @@ void commandLineCalculation(const InputParser & parser)
     }
     std::cout << std::endl;
     std::cout << "default sim " << is_default_sim << " chased ability " << is_chase << " " << chase_ability<<std::endl;
-    std::cout << "cards: sixit " << sixit << " samesies " << samesis << " tipit " << tipit << " wild " << wild << " twice as wild " << twiceWild << " slightly wild " << slightlyWild << std::endl;
+    std::cout << "cards: sixit " << sixit << " samesies " << samesis << " tipit " << tipit << " wild " << wild << " twice as wild " << twiceWild << " slightly wild " << slightlyWild<< " cheer "<< cheer << " probability manipulation "<< probabilityManipulation << std::endl;
     std::cout << "cp " << cp << " number cards " << anzcards << std::endl;
+
+    CardData cardData{};
+    cardData.cp = cp;
+    cardData.use_max_cards = anzcards;
+    cardData.lvlsixit = sixit;
+    cardData.lvlsamesis = samesis;
+    cardData.lvltip_it = tipit;
+    cardData.lvlwild = wild;
+    cardData.lvltwiceWild = twiceWild;
+    cardData.lvlslightlyWild = slightlyWild;
+    cardData.numberProbabilityManipulation = probabilityManipulation;
+    cardData.hasCheer = cheer;
 
     std::vector<OddsResult> ergs;
     DiceRoller dr{ 10 };
@@ -569,13 +593,13 @@ void commandLineCalculation(const InputParser & parser)
     {
         Simulator4 simulator4_{ dr };
         std::cout << "do sim" << std::endl;
-        ergs = simulator4_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, sixit, samesis, tipit, wild, twiceWild, slightlyWild, cp, anzcards, rollattempts, rerolls);
+        ergs = simulator4_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, cardData, rollattempts, rerolls);
     }
     else
     {
         Simulator simulator_{ dr };
         std::cout << "do sim" << std::endl;
-        ergs = simulator_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, sixit, samesis, tipit, wild, twiceWild, slightlyWild, cp, anzcards, rollattempts, rerolls);
+        ergs = simulator_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, cardData, rollattempts, rerolls);
     }
     std::cout << "RESULTS" << std::endl;
     for (const auto& erg : ergs)

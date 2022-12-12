@@ -106,6 +106,8 @@ void DTServer::on_client_connect(SOCKET client)
 	size_t wild = 0;
 	size_t twiceWild = 0;
 	size_t slightlyWild = 0;
+	size_t probabilityManipulation = 0;
+	size_t cheer = 0;
 	size_t cp = 0;
 	size_t anzcards = 0;
 	size_t rollattempts = 0;
@@ -158,6 +160,14 @@ void DTServer::on_client_connect(SOCKET client)
 			wild = value[3] - '0';
 			twiceWild = value[4] - '0';
 			slightlyWild = value[5] - '0';
+			if (value.size() >= 7)
+			{
+				probabilityManipulation = value[6] - '0';
+			}
+			if (value.size() >= 8)
+			{
+				cheer = value[7] - '0';
+			}
 		}
 		if (key == "cp")
 		{
@@ -182,16 +192,28 @@ void DTServer::on_client_connect(SOCKET client)
 		}
 	}
 
+	CardData cardData{};
+	cardData.cp = cp;
+	cardData.use_max_cards = anzcards;
+	cardData.lvlsixit = sixit;
+	cardData.lvlsamesis = samesis;
+	cardData.lvltip_it = tipit;
+	cardData.lvlwild = wild;
+	cardData.lvltwiceWild = twiceWild;
+	cardData.lvlslightlyWild = slightlyWild;
+	cardData.numberProbabilityManipulation = probabilityManipulation;
+	cardData.hasCheer = cheer;
+
 	std::vector<OddsResult> ergs;
 	//ergs = simulator.get_default_probability(hero_name, dice, sixit, samesis, tipit, wild, twiceWild, slightlyWild, cp, anzcards);
 	// normal chase all variant:
 	if (scarlett_die)
 	{
-		ergs = simulator4_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, sixit, samesis, tipit, wild, twiceWild, slightlyWild, cp, anzcards, rollattempts, rerolls);
+		ergs = simulator4_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, cardData, rollattempts, rerolls);
 	}
 	else
 	{
-		ergs = simulator_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, sixit, samesis, tipit, wild, twiceWild, slightlyWild, cp, anzcards, rollattempts, rerolls);
+		ergs = simulator_.get_probability(hero_name, abilities, dice_anatomy, is_default_sim, is_chase, chase_ability, dice, cardData, rollattempts, rerolls);
 	}
 	
 

@@ -34,7 +34,7 @@ public:
 
 	Simulator(DiceRoller& rg);
 
-	std::vector<OddsResult> get_probability(std::string hero_name, const std::vector<std::string>& abilities, std::string diceanatomy, bool default_sim, bool chase, std::string chased_ability, std::vector<DiceIdx> org_dice, size_t sixit, size_t samesis, size_t tip_it, size_t wild, size_t twiceWild, size_t slightlyWild, size_t cp, size_t use_max_cards, size_t roll_atemps, size_t rerolls);
+	std::vector<OddsResult> get_probability(std::string hero_name, const std::vector<std::string>& abilities, std::string diceanatomy, bool default_sim, bool chase, std::string chased_ability, std::vector<DiceIdx> org_dice, const CardData& cardData, size_t roll_atemps, size_t rerolls);
 
 	DiceHash get_hash(const std::vector<DiceIdx>& v)
 	{

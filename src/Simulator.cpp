@@ -1181,7 +1181,7 @@ void  Simulator::test_odds_calc_chase()
     }
 }
 
-std::vector<OddsResult> Simulator::get_probability(std::string hero_name, const std::vector<std::string>& abilities, std::string diceanatomy, bool default_sim, bool chase, std::string chased_ability, std::vector<DiceIdx> org_dice, size_t sixit, size_t samesis, size_t tip_it, size_t wild, size_t twiceWild, size_t slightlyWild, size_t cp, size_t use_max_cards, size_t roll_atemps, size_t rerolls)
+std::vector<OddsResult> Simulator::get_probability(std::string hero_name, const std::vector<std::string>& abilities, std::string diceanatomy, bool default_sim, bool chase, std::string chased_ability, std::vector<DiceIdx> org_dice, const CardData& cardData, size_t roll_atemps, size_t rerolls)
 {
     if (hero_name == "" && abilities.empty())
     {
@@ -1191,16 +1191,6 @@ std::vector<OddsResult> Simulator::get_probability(std::string hero_name, const 
     {
         return {};
     }
-
-    CardData cardData{};
-    cardData.cp = cp;
-    cardData.use_max_cards = use_max_cards;
-    cardData.lvlsixit = sixit;
-    cardData.lvlsamesis = samesis;
-    cardData.lvltip_it = tip_it;
-    cardData.lvlwild = wild;
-    cardData.lvltwiceWild = twiceWild;
-    cardData.lvlslightlyWild = slightlyWild;
 
     std::vector<std::string> abilities_tmp{};
     std::string diceanatomy_tmp = "";
@@ -3024,12 +3014,14 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy)
         ability_name = ability + "-" + diceanatomy;
     }
     precalc_ability(ability_name, target_ability, mydiceanatomy, false);
-    precalc_ability(ability_name, target_ability, mydiceanatomy, true);//DTA
+    //precalc_ability(ability_name, target_ability, mydiceanatomy, true);//DTA
     return;
 }
 
 void Simulator::precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
 {
+    static const size_t cp_anz = 20;
+    static const size_t cards_anz = 11;
     generator_anatomy = mydiceanatomy;
     generator_target = target_ability;
     //calculate every card-combination
@@ -3044,7 +3036,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     std::vector<std::vector<DiceIdx>> erg2{};
     Helpers::getCombinations(options, sampleCount, stack, erg);
     erg.erase(erg.begin());
-    float max_anz = (isDTA ? 1129343.0F : 10366.0F)/2.0F;
+    float max_anz = (isDTA ? 1129342.0F : 10366.0F)/2.0F;
     int done_counter_anz = 0;
     // TODO CREATE FOLDER
     //filename = "./precalcs/" + ability_name + ".txt";
@@ -3078,10 +3070,10 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     std::vector<std::vector<std::vector<DiceThrow>>> save_db{};
 
     
-    for (size_t i = 0; i < 20; i++)
+    for (size_t i = 0; i < cp_anz; i++)
     {
         std::vector<std::vector<DiceThrow>> s1{};
-        for (size_t j = 0; j < 20; j++)
+        for (size_t j = 0; j < cards_anz; j++)
         {
             std::vector<DiceThrow> s2;
             s2.resize(possible_combs_blow_up_size_);
@@ -3156,9 +3148,16 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
         //the very first run is with 0 cp -> thats the default run with no cards
         size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
         //clear saved list, it has to be calculated new
-        for (size_t i = 0; i < 20; i++)
+
+        if (max_cards >= 20 || maxcp >= 20)
         {
-            for (size_t j = 0; j < 20; j++)
+            std::cout << " anzcards or cp TO BIG " << max_cards << " " << maxcp << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < cp_anz; i++)
+        {
+            for (size_t j = 0; j < cards_anz; j++)
             {
                 save_db[i][j].clear();
             }
@@ -3221,12 +3220,25 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
             myfile.open(filename, std::ios::out | std::ios::app);
             if (myfile.fail())
             {
+                for (size_t i = 0; i < cp_anz; i++)
+                {
+                    for (size_t j = 0; j < cards_anz; j++)
+                    {
+                        save_db[i][j].clear();
+                    }
+                }
                 std::cout << " cant open file" << std::endl;
                 return;
             }
         }
     }
-
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            save_db[i][j].clear();
+        }
+    }
     myfile.close();
 }
 
