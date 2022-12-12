@@ -2149,13 +2149,13 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
     std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
     if (!isDTA)
     {
-        options = { 0, 1 };// maximum levels , 0 = no card
+        options = { 0, 1, 2};// maximum levels , 0 = no card
     }
     std::vector<std::vector<DiceIdx>> erg{};
     std::vector<std::vector<DiceIdx>> erg2{};
     Helpers::getCombinations(options, sampleCount, stack, erg);
     erg.erase(erg.begin());
-    float max_anz = isDTA ? 6.0F * 48553.0F : 6.0F*385.0F;
+    float max_anz = (isDTA ? 1129343.0F : 10366.0F) / 2.0F;
     int done_counter_anz = 0;
     // TODO CREATE FOLDER
     //filename = "./precalcs/" + ability_name + ".txt";
@@ -2194,7 +2194,7 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
     for (size_t i = 0; i < 20; i++)
     {
         std::vector<std::vector<DiceThrow>> s1{};
-        for (size_t j = 0; j < 10; j++)
+        for (size_t j = 0; j < 20; j++)
         {
             std::vector<DiceThrow> s2;
             s2.resize(possible_combs_blow_up_size_);
@@ -2217,6 +2217,10 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
         bool sixit = combi[5] >= 1;
 
         if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
         {
             continue;
         }
@@ -2268,14 +2272,14 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
         //clear saved list, it has to be calculated new
         for (size_t i = 0; i < 20; i++)
         {
-            for (size_t j = 0; j < 10; j++)
+            for (size_t j = 0; j < 20; j++)
             {
                 save_db[i][j].clear();
             }
         }
-        for (size_t cp = tempcp; cp <= maxcp; cp++)
+        for (size_t cp = 0; cp <= maxcp; cp++)
         {
-            for (size_t anzcards = 1; anzcards <= max_cards; anzcards++)
+            for (size_t anzcards = 0; anzcards <= max_cards; anzcards++)
             {
                 if (start_number_lines <= done_counter_anz)
                 {
@@ -2283,11 +2287,11 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
                     ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
                     possible_list_with_cheat_dt_save_last2 = nullptr;//.clear();
                     possible_list_with_cheat_dt_save_last = nullptr;
-                    if (cp > 1)
+                    if (cp > 0)
                     {
                         possible_list_with_cheat_dt_save_last2 = &(save_db[cp - 1][anzcards]);
                     }
-                    if (anzcards > 1)
+                    if (anzcards > 0)
                     {
                         possible_list_with_cheat_dt_save_last = &(save_db[cp][anzcards - 1]);
                     }

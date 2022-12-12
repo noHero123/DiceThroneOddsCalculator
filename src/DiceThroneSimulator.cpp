@@ -34,9 +34,9 @@ void do_precalc(std::string anatomy, std::string ability)
     Simulator sim(dr);
     Simulator4 sim4(dr);
     std::cout << "start " << ability << " " << anatomy << "##################################"<<std::endl;
-    //sim.precalc_ability(ability, anatomy);
+    sim.precalc_ability(ability, anatomy);
     std::cout << "start sim4 " << ability << " " << anatomy << "##################################" << std::endl;
-    sim4.precalc_ability(ability, anatomy);
+    //sim4.precalc_ability(ability, anatomy);
 }
 
 int precalc_abilitys(std::vector<std::pair<std::string, std::string>> all_data)
@@ -592,8 +592,8 @@ int main(int argc, char* argv[])
         commandLineCalculation(parser);
         return 0;
     }
-    bool docalcs = false;
-    bool do_tests = true;
+    bool docalcs = true;
+    bool do_tests = false;
     if (docalcs)
     {
         precalc_all(false, "");
