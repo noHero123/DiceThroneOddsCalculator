@@ -31,12 +31,21 @@
 void do_precalc(std::string anatomy, std::string ability)
 {
     DiceRoller dr{ 10 };
-    Simulator sim(dr);
-    Simulator4 sim4(dr);
-    std::cout << "start " << ability << " " << anatomy << "##################################"<<std::endl;
-    sim.precalc_ability(ability, anatomy);
-    std::cout << "start sim4 " << ability << " " << anatomy << "##################################" << std::endl;
-    //sim4.precalc_ability(ability, anatomy);
+    bool calc_sim = false;
+    bool calc_sim4 = true;
+    if (calc_sim)
+    {
+        Simulator sim(dr);
+        std::cout << "start " << ability << " " << anatomy << "##################################" << std::endl;
+        sim.precalc_ability(ability, anatomy);
+    }
+    if (calc_sim4)
+    {
+        Simulator4 sim4(dr);
+        std::cout << "start sim4 " << ability << " " << anatomy << "##################################" << std::endl;
+        sim4.precalc_ability(ability, anatomy);
+    }
+    
 }
 
 int precalc_abilitys(std::vector<std::pair<std::string, std::string>> all_data)
