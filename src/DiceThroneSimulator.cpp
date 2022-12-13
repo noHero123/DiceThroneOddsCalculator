@@ -31,13 +31,14 @@
 void do_precalc(std::string anatomy, std::string ability)
 {
     DiceRoller dr{ 10 };
-    bool calc_sim = false;
-    bool calc_sim4 = true;
+    bool calc_sim = true;
+    bool calc_dta = true;
+    bool calc_sim4 = false;
     if (calc_sim)
     {
         Simulator sim(dr);
         std::cout << "start " << ability << " " << anatomy << "##################################" << std::endl;
-        sim.precalc_ability(ability, anatomy);
+        sim.precalc_ability(ability, anatomy, calc_dta);
     }
     if (calc_sim4)
     {

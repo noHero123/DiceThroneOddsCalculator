@@ -119,7 +119,7 @@ public:
 	
 	bool read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards);
 	void precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
-	void precalc_ability(std::string ability, std::string diceanatomy);
+	void precalc_ability(std::string ability, std::string diceanatomy, bool calc_dta);
 
 
 	//default one

@@ -3000,7 +3000,7 @@ size_t Simulator::combo_sim_ultra_faster_reroll_DT_chase(const std::vector<DiceI
 
 //LOADING AND READING DATABASE######################################################################################################################################################
 
-void Simulator::precalc_ability(std::string ability, std::string diceanatomy)
+void Simulator::precalc_ability(std::string ability, std::string diceanatomy, bool calc_dta)
 {
     std::vector<DiceIdx> mydiceanatomy = Helpers::transformDiceAnatomy(diceanatomy);
     std::vector<DiceIdx> target_ability = Helpers::transformAbility(ability);
@@ -3013,8 +3013,7 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy)
     {
         ability_name = ability + "-" + diceanatomy;
     }
-    precalc_ability(ability_name, target_ability, mydiceanatomy, false);
-    //precalc_ability(ability_name, target_ability, mydiceanatomy, true);//DTA
+    precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
     return;
 }
 
