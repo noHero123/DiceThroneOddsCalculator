@@ -232,6 +232,7 @@ public:
 	std::vector<DiceThrow> possible_list_with_cheat_dt_save;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_last;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_last2;
+	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_upper;
 	std::vector<DiceIdx> generator_anatomy;
 	std::vector<DiceIdx> generator_target;
 	bool possible_calced_{ false };

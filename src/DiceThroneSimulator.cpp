@@ -624,7 +624,7 @@ void commandLineCalculation(const InputParser & parser)
 void do_precalc_test()
 {
     std::string anatomy = "AAABBC";
-    std::string ability = "AABB";
+    std::string ability = "CCCCC";
     DiceRoller dr{ 10 };
     bool calc_sim = true;
     bool calc_dta = true;

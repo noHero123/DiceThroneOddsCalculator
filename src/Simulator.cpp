@@ -3014,12 +3014,13 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy, bo
         ability_name = ability + "-" + diceanatomy;
     }
     precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
-    //precalc_ability_fast(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability_fast(ability_name, target_ability, mydiceanatomy, calc_dta); //not so fast as thought
     return;
 }
 
 void Simulator::precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
 {
+    bool use_upper_bound = true;
     static const size_t cp_anz = 20;
     static const size_t cards_anz = 11;
     generator_anatomy = mydiceanatomy;
@@ -3162,6 +3163,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
                 save_db[i][j].clear();
             }
         }
+        possible_list_with_cheat_dt_save_upper = nullptr;
         for (size_t cp = 0; cp <= maxcp; cp++)
         {
             for (size_t anzcards = 0; anzcards <= max_cards; anzcards++)
@@ -3170,7 +3172,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
                 {
                     std::stringstream ss;
                     ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
-                    possible_list_with_cheat_dt_save_last2 = nullptr;//.clear();
+                    possible_list_with_cheat_dt_save_last2 = nullptr;
                     possible_list_with_cheat_dt_save_last = nullptr;
                     if (cp > 0)
                     {
@@ -3180,9 +3182,40 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
                     {
                         possible_list_with_cheat_dt_save_last = &(save_db[cp][anzcards-1]);
                     }
-                    get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
-                    save_db[cp][anzcards] = possible_list_with_cheat_dt;
-                    
+                    if (use_upper_bound)
+                    {
+                        // 306 sec -> 30% aabb
+                        // 306 -> !1.51% ccccc
+                        if (possible_list_with_cheat_dt_save_upper == nullptr)
+                        {
+                            possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][max_cards]);
+                            if (possible_list_with_cheat_dt_save_upper->empty())
+                            {
+                                get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, maxcp, max_cards);
+                                save_db[maxcp][max_cards] = possible_list_with_cheat_dt;
+                                possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][max_cards]);
+                            }
+                        }
+                        
+                        
+
+                        if (cp != maxcp && anzcards != max_cards)
+                        {
+                            get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
+                            save_db[cp][anzcards] = possible_list_with_cheat_dt;
+                        }
+                        else
+                        {
+                            possible_list_with_cheat_dt = save_db[maxcp][max_cards];
+                        }
+                    }
+                    else
+                    {
+                        //300 sec for 36% aabb
+                        //306 sec -> 1.5% ccccc
+                        get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
+                        save_db[cp][anzcards] = possible_list_with_cheat_dt;
+                    }
                     auto end_time = std::chrono::high_resolution_clock::now();
                     auto time = end_time - start_time;
                     auto tmili = (time / std::chrono::milliseconds(1)) / 1000.0;
@@ -3191,10 +3224,11 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
                         print_time = tmili + 5;
                         float done = (done_counter_anz - start_number_lines) / (max_anz);
                         double timefor100 = tmili / done ;
+                        double tmin = tmili / 60.0;
                         double proz_done = done_counter_anz / (max_anz);
                         double time_remain = (timefor100 - (proz_done * timefor100)) / (60.0);
-                        std::cout << ability_name << " " << ss.str() << " preparation took " << tmili << " seconds, " << int(10000.0 * proz_done) / 100.0 <<"%" << std::endl;
-                        std::cout << ability_name << " " << ss.str() << " remaining time: " << time_remain << " min, " << time_remain/60.0 << " h " << std::endl;
+                        std::cout << ability_name << " " << ss.str() << " took " << tmin << " min, " << " remain: " << time_remain << " min, " << int(10000.0 * proz_done) / 100.0 <<"%" << std::endl;
+                        //std::cout << ability_name << " " << ss.str() << " remaining time: " << time_remain << " min, " << time_remain/60.0 << " h " << std::endl;
                     }
                     size_t counter = 0;
                     for (const auto& data : possible_list_with_cheat_dt)
@@ -5052,6 +5086,18 @@ void Simulator::get_all_positive_combs_storage_lower_bound(const std::vector<Dic
             //last one is with more restriction-> is it possible, this run is also possible
             const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_last2)[i];
             if (lastdt.success)
+            {
+                skipps2++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        // UPPER bound
+        if (possible_list_with_cheat_dt_save_upper != nullptr && !possible_list_with_cheat_dt_save_upper->empty())
+        {
+            //upper one is with less restrictions, if it is not possible, this one also not
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_upper)[i];
+            if (!lastdt.success)
             {
                 skipps3++;
                 possible_list_with_cheat_dt[i] = lastdt;
