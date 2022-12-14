@@ -118,8 +118,14 @@ public:
 	int test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCards, size_t combo_store_idx);
 	
 	bool read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards);
-	void precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
 	void precalc_ability(std::string ability, std::string diceanatomy, bool calc_dta);
+	void precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
+
+	void precalc_ability_fast(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
+	void get_all_positive_combs_storage_upper_lower_bound(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target, const std::vector<Card>& cards, size_t cp, size_t use_max_cards);
+	void calc_all_points(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target_ability, int mincp, int mincards, int maxcp, int maxcards, std::vector<std::vector<std::vector<DiceThrow>>>& save_db, const  std::vector<Card>& cards);
+
+	
 
 
 	//default one
@@ -221,6 +227,8 @@ public:
 	std::vector<DiceThrow> possible_list_with_cheat_dt_save;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_last;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_last2;
+	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_upper;
+	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_upper2;
 	std::vector<DiceIdx> generator_anatomy;
 	std::vector<DiceIdx> generator_target;
 	bool possible_calced_{ false };

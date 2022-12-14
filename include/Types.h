@@ -92,7 +92,7 @@ struct DiceThrowDice
 
 struct DiceManipulation
 {
-	DiceIdx card{ 0 }; //1: samesis, 2: tipit, 3:sixit, 4: wild
+	DiceIdx card{ 0 }; //1: samesis, 2: tipit, 3:sixit, 4: wild 5: slightly wild, 6: cheer, 7+8: prob manipulation
 	DiceIdx dice1val{ 9 };
 	DiceIdx dice1change{ 9 };
 	DiceIdx dice2val{ 9 };
@@ -169,7 +169,7 @@ struct DiceThrow
 	bool success{ false };
 	DiceIdx dice[5]{ 0U };
 	bool rerollers[5]{ false };
-	std::vector<DiceManipulation> manipula{{},{},{},{},{},{}};
+	std::vector<DiceManipulation> manipula{{},{},{},{},{},{},{},{},{}};
 	std::vector<int> reroll_manipulation{ 0,0,0,0,0 };
 	DiceHash hash{65535};
 
@@ -201,6 +201,9 @@ struct DiceThrow
 		this->manipula[3] = dt.manipula[3];
 		this->manipula[4] = dt.manipula[4];
 		this->manipula[5] = dt.manipula[5];
+		this->manipula[6] = dt.manipula[6];
+		this->manipula[7] = dt.manipula[7];
+		this->manipula[8] = dt.manipula[8];
 		this->hash = dt.hash;
 		return;
 	}
@@ -229,6 +232,9 @@ struct DiceThrow
 		this->manipula[3] = dt.manipula[3];
 		this->manipula[4] = dt.manipula[4];
 		this->manipula[5] = dt.manipula[5];
+		this->manipula[6] = dt.manipula[6];
+		this->manipula[7] = dt.manipula[7];
+		this->manipula[8] = dt.manipula[8];
 		this->hash = dt.hash;
 		return *this;
 	}
@@ -247,7 +253,7 @@ struct DiceThrow
 		this->reroll_manipulation[3] = 0;
 		this->reroll_manipulation[4] = 0;
 
-		for (size_t i = 0; i < 6; i++)
+		for (size_t i = 0; i < manipula.size(); i++)
 		{
 			manipula[i].card = 0;
 			manipula[i].dice1change = 9;
@@ -275,7 +281,7 @@ struct DiceThrow
 				return false;
 			}
 		}
-		for (size_t i = 0; i < 6; i++)
+		for (size_t i = 0; i < manipula.size(); i++)
 		{
 			if (!manipula[i].isEqual(dt.manipula[i]))
 			{
@@ -438,7 +444,7 @@ struct DiceThrow
 		//std::string s = getChar(success) + ',' + getChar(rerollers[0]) + getChar(rerollers[1]) + getChar(rerollers[2]) + getChar(rerollers[3]) + getChar(rerollers[4]);
 		std::string s = ((success)?"x":"y") + get_reroll_txt();
 		
-		for (size_t i = 0; i < 6; i++)
+		for (size_t i = 0; i < manipula.size(); i++)
 		{
 			if (manipula[i].card > 0)
 			{
@@ -452,7 +458,7 @@ struct DiceThrow
 	{
 		std::string s = getChar(success) + ',' + getChar(rerollers[0]) + getChar(rerollers[1]) + getChar(rerollers[2]) + getChar(rerollers[3]) + getChar(rerollers[4]);
 
-		for (size_t i = 0; i < 6; i++)
+		for (size_t i = 0; i < manipula.size(); i++)
 		{
 			if (manipula[i].card > 0)
 			{
@@ -476,7 +482,7 @@ struct DiceThrow
 		{
 			ss << rerollers[i];
 		}
-		for (size_t i = 0; i < 6; i++)
+		for (size_t i = 0; i < manipula.size(); i++)
 		{
 			if (manipula[i].card > 0)
 			{

@@ -3014,6 +3014,7 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy, bo
         ability_name = ability + "-" + diceanatomy;
     }
     precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability_fast(ability_name, target_ability, mydiceanatomy, calc_dta);
     return;
 }
 
@@ -3240,6 +3241,382 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     }
     myfile.close();
 }
+
+void Simulator::calc_all_points(const std::vector<DiceIdx> & mydiceanatomy, const std::vector<DiceIdx>& target_ability, int mincp, int mincards, int maxcp, int maxcards, std::vector<std::vector<std::vector<DiceThrow>>>& save_db, const  std::vector<Card>& cards)
+{
+    size_t calc_cp = 0;
+    size_t calc_anzcards = 0;
+    if (save_db[mincp][mincards].empty())
+    {
+        calc_cp = mincp;
+        calc_anzcards = mincards;
+        possible_list_with_cheat_dt_save_last2 = nullptr;
+        possible_list_with_cheat_dt_save_last = nullptr;
+        possible_list_with_cheat_dt_save_upper2 = nullptr;
+        possible_list_with_cheat_dt_save_upper = nullptr;
+        
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    if (save_db[maxcp][maxcards].empty())
+    {
+        calc_cp = maxcp;
+        calc_anzcards = maxcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_last2 = nullptr;
+        possible_list_with_cheat_dt_save_upper2 = nullptr;
+        possible_list_with_cheat_dt_save_upper = nullptr;
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+
+    if (save_db[mincp][maxcards].empty())
+    {
+        calc_cp = mincp;
+        calc_anzcards = maxcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][maxcards]);
+        possible_list_with_cheat_dt_save_last2 = nullptr;
+        possible_list_with_cheat_dt_save_upper2 = nullptr;
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    if (save_db[maxcp][mincards].empty())
+    {
+        calc_cp = maxcp;
+        calc_anzcards = mincards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][maxcards]);
+        possible_list_with_cheat_dt_save_last2 = nullptr;
+        possible_list_with_cheat_dt_save_upper2 = nullptr;
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+
+    int halfcp = (maxcp + mincp) / 2;
+    int halfcards = (maxcards + mincards) / 2;
+
+    
+    if (save_db[halfcp][mincards].empty())
+    {
+        calc_cp = halfcp;
+        calc_anzcards = mincards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][mincards]);
+
+        possible_list_with_cheat_dt_save_last2 = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper2 = &(save_db[maxcp][maxcards]);
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    if (save_db[halfcp][maxcards].empty())
+    {
+        calc_cp = halfcp;
+        calc_anzcards = maxcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][maxcards]);
+
+        possible_list_with_cheat_dt_save_last2 = &(save_db[mincp][maxcards]);
+        possible_list_with_cheat_dt_save_upper2 = &(save_db[maxcp][maxcards]);
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    
+    if (save_db[mincp][halfcards].empty())
+    {
+        calc_cp = mincp;
+        calc_anzcards = halfcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[mincp][maxcards]);
+
+        possible_list_with_cheat_dt_save_last2 = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper2 = &(save_db[maxcp][maxcards]);
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    if (save_db[maxcp][halfcards].empty())
+    {
+        calc_cp = maxcp;
+        calc_anzcards = halfcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][mincards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][maxcards]);
+
+        possible_list_with_cheat_dt_save_last2 = &(save_db[maxcp][mincards]);
+        possible_list_with_cheat_dt_save_upper2 = &(save_db[maxcp][maxcards]);
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+
+    if (save_db[halfcp][halfcards].empty())
+    {
+        calc_cp = halfcp;
+        calc_anzcards = halfcards;
+        possible_list_with_cheat_dt_save_last = &(save_db[mincp][halfcards]);
+        possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][halfcards]);
+
+        possible_list_with_cheat_dt_save_last = &(save_db[halfcp][mincards]);
+        possible_list_with_cheat_dt_save_upper2 = &(save_db[halfcp][maxcards]);
+
+        get_all_positive_combs_storage_upper_lower_bound(mydiceanatomy, target_ability, cards, calc_cp, calc_anzcards);
+        save_db[calc_cp][calc_anzcards] = possible_list_with_cheat_dt;
+    }
+    
+
+    if ((mincp+1 < halfcp || mincards+1 < halfcards))
+    {
+        calc_all_points(mydiceanatomy, target_ability, mincp, mincards, halfcp, halfcards, save_db, cards);
+    }
+
+    if ((halfcp+1 < maxcp || halfcards+1 < maxcards) )
+    {
+        calc_all_points(mydiceanatomy, target_ability, halfcp, halfcards, maxcp, maxcards, save_db, cards);
+    }
+
+    if ((halfcp+1 < maxcp || mincards+1 < halfcards))
+    {
+        calc_all_points(mydiceanatomy, target_ability, halfcp, mincards, maxcp, halfcards, save_db, cards);
+    }
+
+    if ((mincp+1 < halfcp || halfcards+1 < maxcards))
+    {
+        calc_all_points(mydiceanatomy, target_ability, mincp, halfcards, halfcp, maxcards, save_db, cards);
+    }
+
+
+    return;
+}
+
+
+void Simulator::precalc_ability_fast(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
+{   
+    //1400sec , 99.67%
+    static const size_t cp_anz = 20;
+    static const size_t cards_anz = 11;
+    generator_anatomy = mydiceanatomy;
+    generator_target = target_ability;
+    //calculate every card-combination
+    std::vector<DiceIdx> stack;
+    size_t sampleCount = 8U;
+    std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
+    if (!isDTA)
+    {
+        options = { 0, 1, 2 };// maximum levels , 0 = no card
+    }
+    std::vector<std::vector<DiceIdx>> erg{};
+    std::vector<std::vector<DiceIdx>> erg2{};
+    Helpers::getCombinations(options, sampleCount, stack, erg);
+    erg.erase(erg.begin());
+    float max_anz = (isDTA ? 1129342.0F : 10366.0F) / 2.0F;
+    int done_counter_anz = 0;
+    // TODO CREATE FOLDER
+    //filename = "./precalcs/" + ability_name + ".txt";
+    std::string filename = "./precalcs/" + ability_name + ".txt";
+    if (isDTA)
+    {
+        filename = "./precalcsDTA/" + ability_name + ".txt";
+    }
+#ifdef __linux__
+    filename = "/content/drive/MyDrive/DTSimulatorTest/precalcs/" + ability_name + ".txt";
+#endif
+    size_t start_number_lines = 0;
+    if (Helpers::file_exists(filename))
+    {
+        start_number_lines = Helpers::get_number_lines(filename);
+        if (start_number_lines >= max_anz)
+        {
+            return;
+        }
+    }
+
+    std::ofstream myfile;
+    myfile.open(filename, std::ios::out | std::ios::app);
+    if (myfile.fail())
+    {
+        std::cout << " cant open file, make sure folder \"precalcs\" exists" << std::endl;
+        return;
+    }
+
+    //create database for speedup
+    std::vector<std::vector<std::vector<DiceThrow>>> save_db{};
+
+
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        std::vector<std::vector<DiceThrow>> s1{};
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            std::vector<DiceThrow> s2;
+            s2.resize(possible_combs_blow_up_size_);
+            s1.push_back(s2);
+        }
+        save_db.push_back(s1);
+    }
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    auto print_time = ((start_time - start_time) / std::chrono::milliseconds(1)) / 1000.0;
+
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+
+        bool swild = combi[0] >= 1;
+        bool samesis = combi[1] >= 1;
+        bool tip_it = combi[2] >= 1;
+        bool wild = combi[3] >= 1;
+        bool twiceWild = combi[4] >= 1;
+        bool sixit = combi[5] >= 1;
+
+        if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
+        {
+            continue;
+        }
+        if (combi[0] > 3 || combi[0] == 2) //slightly wild 1 and 2 dont differ (only you can use it on teammates)
+        {
+            continue;
+        }
+        if (combi[1] > 3) //samesis
+        {
+            continue;
+        }
+        if (combi[2] > 3) //tip it
+        {
+            continue;
+        }
+        if (combi[3] > 3) //wild
+        {
+            continue;
+        }
+        if (combi[4] > 4) //twice as wild has 4 different stages
+        {
+            continue;
+        }
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
+        {
+            continue;
+        }
+
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
+
+        size_t maxcp = 0;
+        for (const auto& c : cards)
+        {
+            maxcp += c.cp_cost;
+        }
+        size_t max_cards = cards.size();
+
+        //the very first run is with 0 cp -> thats the default run with no cards
+        size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
+        //clear saved list, it has to be calculated new
+
+        if (max_cards >= 20 || maxcp >= 20)
+        {
+            std::cout << " anzcards or cp TO BIG " << max_cards << " " << maxcp << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < cp_anz; i++)
+        {
+            for (size_t j = 0; j < cards_anz; j++)
+            {
+                save_db[i][j].clear();
+            }
+        }
+
+        //calc all stuff with binary search
+        calc_all_points(mydiceanatomy, target_ability, 0, 0, maxcp, max_cards, save_db, cards);
+
+        //just save all stuff
+        for (size_t cp = 0; cp <= maxcp; cp++)
+        {
+            for (size_t anzcards = 0; anzcards <= max_cards; anzcards++)
+            {
+                if (start_number_lines <= done_counter_anz)
+                {
+                    std::stringstream ss;
+                    ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
+                    possible_list_with_cheat_dt_save_last2 = nullptr;
+                    possible_list_with_cheat_dt_save_last = nullptr;
+                    possible_list_with_cheat_dt_save_upper2 = nullptr;
+                    possible_list_with_cheat_dt_save_upper = nullptr;
+                    possible_list_with_cheat_dt = save_db[cp][anzcards];
+
+                    auto end_time = std::chrono::high_resolution_clock::now();
+                    auto time = end_time - start_time;
+                    auto tmili = (time / std::chrono::milliseconds(1)) / 1000.0;
+                    if (tmili > print_time)
+                    {
+                        print_time = tmili + 5;
+                        float done = (done_counter_anz - start_number_lines) / (max_anz);
+                        double timefor100 = tmili / done;
+                        double proz_done = done_counter_anz / (max_anz);
+                        double time_remain = (timefor100 - (proz_done * timefor100)) / (60.0);
+                        std::cout << ability_name << " " << ss.str() << " preparation took " << tmili << " seconds, " << int(10000.0 * proz_done) / 100.0 << "%" << std::endl;
+                        std::cout << ability_name << " " << ss.str() << " remaining time: " << time_remain << " min, " << time_remain / 60.0 << " h " << std::endl;
+                    }
+                    size_t counter = 0;
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        if (data.success)
+                        {
+                            counter++;
+                        }
+                    }
+                    ss << std::endl;// << counter << ";";
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        ss << data.get_save_string();
+                    }
+                    myfile << ss.str() << std::endl;
+                }
+                done_counter_anz++;
+            }
+        }
+        if (start_number_lines <= done_counter_anz)
+        {
+            myfile.close();
+            myfile.open(filename, std::ios::out | std::ios::app);
+            if (myfile.fail())
+            {
+                for (size_t i = 0; i < cp_anz; i++)
+                {
+                    for (size_t j = 0; j < cards_anz; j++)
+                    {
+                        save_db[i][j].clear();
+                    }
+                }
+                std::cout << " cant open file" << std::endl;
+                return;
+            }
+        }
+    }
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            save_db[i][j].clear();
+        }
+    }
+    myfile.close();
+}
+
 
 bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
 {
@@ -4795,6 +5172,292 @@ void Simulator::get_all_positive_combs_storage_lower_bound(const std::vector<Dic
     }
     //possible_list_with_cheat_dt_save_last = possible_list_with_cheat_dt;
 }
+
+void Simulator::get_all_positive_combs_storage_upper_lower_bound(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target, const std::vector<Card>& cards, size_t cp, size_t use_max_cards)
+{
+
+    bool tip_it = false;
+    bool sixit = false;
+    size_t sixit_idx = 0;
+    size_t sixit_cp = 1;
+    for (size_t i = 0; i < cards.size(); i++)
+    {
+        const auto& c = cards[i];
+        if (c.card_id == 0)
+        {
+            sixit = true;
+            sixit_idx = i;
+            sixit_cp = c.cp_cost;
+        }
+        if (c.card_id == 2)
+        {
+            tip_it = true;
+        }
+    }
+
+    int pos_count = 0;
+    std::vector<DiceThrow> combs;
+
+    bool need_sixit = false;
+    //perform sixit test, only if a 6 or a 5 with tip it! is needed
+    if (sixit && target[mydiceanatomy[5]] > 0)
+    {
+        need_sixit = true;
+    }
+    if (tip_it && sixit)
+    {
+        if (target[mydiceanatomy[4]] > 0)
+        {
+            need_sixit = true;
+        }
+    }
+    size_t count_no_cheat = 0;
+    bool straight = false;
+    bool is_big = false;
+
+    if (possible_calced_ == false)
+    {
+        possible_calced_ = true;
+        if (target[0] >= 7)
+        {
+            straight = true;
+            need_sixit = sixit;
+            //Small or big straight!
+            is_big = target[0] == 8;
+            for (size_t j = 0; j < possible_combs_.size(); j++)
+            {
+                DiceThrow& dt = possible_combs_[j];
+                dt.success = false;
+                if (is_straight(dt, is_big))
+                {
+                    dt.success = true;
+                    count_no_cheat++;
+                }
+            }
+        }
+        else
+        {
+            //check all legal combos without helper-cards
+
+            for (size_t j = 0; j < possible_combs_.size(); j++)
+            {
+                DiceThrow& dt = possible_combs_[j];
+                dt.success = false;
+                if (hit_target_ability(target, dt, mydiceanatomy))
+                {
+                    dt.success = true;
+                    count_no_cheat++;
+                }
+            }
+        }
+        //std::cout << "hits no cards: " << count_no_cheat << "/" << possible_combs_.size() << std::endl;
+        //blow up list for cardhelpers to speed next step up:
+        //generate all combinations (so we dont have to sort dice-throws)
+        possible_combs_blow_up_.clear();
+        possible_combs_blow_up_to_sorted_idx.clear();
+        possible_combs_blow_up_.resize(possible_combs_blow_up_size_);
+        possible_combs_blow_up_to_sorted_idx.resize(possible_combs_blow_up_size_);
+        for (size_t i = 0; i < possible_combs_.size(); i++)
+        {
+            const DiceThrow& dt = possible_combs_[i];
+
+            std::vector<DiceThrowDice> v = dt.getvec();
+            DiceHash org_idx = get_hash(v);
+            do
+            {
+                size_t idx = get_hash(v);
+                possible_combs_blow_up_[idx] = dt;
+                for (size_t i = 0; i < number_dice_; i++)
+                {
+                    possible_combs_blow_up_[idx].rerollers[i] = v[i].reroll;
+                    possible_combs_blow_up_[idx].dice[i] = v[i].die;
+                    possible_combs_blow_up_to_sorted_idx[idx] = org_idx;
+
+                }
+            } while (std::next_permutation(v.begin(), v.end(),
+                [](const auto& lhs, const auto& rhs)
+                { return lhs.die < rhs.die; }));
+        }
+    }
+
+    std::size_t skipps = 0;
+    std::size_t skipps2 = 0;
+    std::size_t skipps3 = 0;
+    std::size_t skipps4 = 0;
+    //create list for all successfully combinations (with card-helpers)
+    if (possible_list_with_cheat_dt.empty())
+    {
+        possible_list_with_cheat_dt = possible_combs_;
+    }
+    int positive_count = 0;
+    // we calculated positive stuff with every card and cp in possible_list_with_cheat_dt_save
+    //current run have more restrictions -> only test the ones that where true in possible_list_with_cheat_dt_save if they are still true
+    for (size_t i = 0; i < possible_combs_.size(); i++)
+    {
+        const DiceThrow& dt = possible_combs_[i];
+        // LOWER BOUND
+        if (possible_list_with_cheat_dt_save_last != nullptr && !possible_list_with_cheat_dt_save_last->empty())
+        {
+            //last one is with more restriction-> is it possible, this run is also possible
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_last)[i];
+            if (lastdt.success)
+            {
+                skipps2++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        // LOWER BOUND
+        if (possible_list_with_cheat_dt_save_last2 != nullptr && !possible_list_with_cheat_dt_save_last2->empty())
+        {
+            //last one is with more restriction-> is it possible, this run is also possible
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_last2)[i];
+            if (lastdt.success)
+            {
+                skipps2++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        // UPPER bound
+        if (possible_list_with_cheat_dt_save_upper != nullptr && !possible_list_with_cheat_dt_save_upper->empty())
+        {
+            //upper one is with less restrictions, if it is not possible, this one also not
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_upper)[i];
+            if (!lastdt.success)
+            {
+                skipps3++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        // UPPER bound2
+        if (possible_list_with_cheat_dt_save_upper2 != nullptr && !possible_list_with_cheat_dt_save_upper2->empty())
+        {
+            //upper one is with less restrictions, if it is not possible, this one also not
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_upper2)[i];
+            if (!lastdt.success)
+            {
+                skipps3++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+
+        //fast test
+        if (!straight && !dt.success && !fast_test(target, dt, mydiceanatomy, cards, cp, use_max_cards))
+        {
+            skipps++;
+            possible_list_with_cheat_dt[i] = dt;
+            continue;
+        }
+        if (!dt.success)
+        {
+            //throw was manipulated in complete list -> only test this one, if it is still successfull
+            DiceThrow dtc = dt;
+            for (size_t ii = 0; ii < number_dice_; ii++)
+            {
+                dtc.reroll_manipulation[ii] = 0;
+            }
+
+            card_store_[0] = cards;
+            if (cards.size() > 0 && !need_sixit && sixit)
+            {
+                card_store_[0][sixit_idx].can_use = false;
+            }
+            int val = test_all_combis(dtc, cp, use_max_cards, 0);
+            if (val >= 0)
+            {
+                //dt.success = true;
+                possible_list_with_cheat_dt[i].success = true;
+                //get real rerollers!
+                //sort rerollers
+                for (size_t ii = 0; ii < number_dice_ - 1; ii++)
+                {
+                    if (dt.dice[ii] == dt.dice[ii + 1] && this->target_reroller_start.reroll_manipulation[ii] == 1 && this->target_reroller_start.reroll_manipulation[ii + 1] == 0)
+                    {
+                        std::swap(this->target_reroller_start.reroll_manipulation[ii], this->target_reroller_start.reroll_manipulation[ii + 1]);
+                        std::swap(this->target_reroll_dice.rerollers[ii], this->target_reroll_dice.rerollers[ii + 1]);
+                    }
+                }
+
+                for (size_t ii = 0; ii < number_dice_; ii++)
+                {
+                    possible_list_with_cheat_dt[i].rerollers[ii] = this->target_reroll_dice.rerollers[ii];
+                    if (target_reroller_start.reroll_manipulation[ii] >= 1)
+                    {
+                        possible_list_with_cheat_dt[i].rerollers[ii] = true;
+                    }
+                }
+                possible_list_with_cheat_dt[i].manipula = this->target_reroller_start.manipula;
+                possible_list_with_cheat_dt[i].reroll_manipulation = this->target_reroller_start.reroll_manipulation;
+                positive_count++;
+
+            }
+            else
+            {
+                possible_list_with_cheat_dt[i].success = false;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt[i] = dt;
+        }
+    }
+
+#ifdef __linux__
+    std::cout << "skipped with lower: " << skipps2 << " skipped lower 2: " << skipps3 << " skipps test " << skipps << std::endl;
+#endif
+    //std::cout << "skipped with lower: " << skipps2 << " skipped upper : " << skipps3<< " skipps same "<< skipps4 <<" skipps test "<< skipps << std::endl;
+    //std::cout << "hits cards: " << positive_count << "/" << possible_combs_.size() << std::endl;
+    possible_list_with_cheat_dt_succ_only.clear();
+    for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
+    {
+        const DiceThrow& dt = possible_list_with_cheat_dt[i];
+        if (!dt.success)
+        {
+            continue;
+        }
+        if (dt.manipula[0].card != 0)
+        {
+            //manipulated are allways added
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            continue;
+        }
+        bool added = false;
+        if (straight && !is_big)
+        {
+            if (!is_big_straight(dt))
+            {
+                possible_list_with_cheat_dt_succ_only.push_back(dt);
+                added = true;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            added = true;
+        }
+        if (added && sixit && cp >= sixit_cp && use_max_cards >= 1 && possible_list_with_cheat_dt_succ_only.back().dice[number_dice_ - 1] == 5)
+        {
+            possible_list_with_cheat_dt_succ_only.back().rerollers[number_dice_ - 1] = true;
+        }
+    }
+
+    // generate reroll list for unsuccesfull throws :
+    for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
+    {
+        DiceThrow& dt = possible_list_with_cheat_dt[i];
+        if (dt.success)
+        {
+            continue;
+        }
+        //std::cout << "no success " << dt.get_string() << std::endl;
+        update_rerollers(dt);
+    }
+    //possible_list_with_cheat_dt_save_last = possible_list_with_cheat_dt;
+}
+
 
 void Simulator::choose(size_t offset, size_t k, const std::vector<DiceIdx>& combogen, std::vector<DiceIdx>& combination, size_t& counter)
 {
