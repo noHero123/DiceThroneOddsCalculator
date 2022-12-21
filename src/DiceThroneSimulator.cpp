@@ -32,21 +32,22 @@ void do_precalc(std::string anatomy, std::string ability)
 {
     DiceRoller dr{ 10 };
     bool calc_sim = true;
-    bool calc_dta = false;
-    bool calc_sim4 = true;
+    bool calc_dta = true;
+
+    bool calc_sim4 = false;
     if (calc_sim)
     {
         Simulator sim(dr);
         std::cout << "start " << ability << " " << anatomy << "##################################" << std::endl;
         sim.precalc_ability(ability, anatomy, calc_dta);
-        std::cout << ability << " " << anatomy << "ENDED ##################################" << std::endl;
+        std::cout << ability << " " << anatomy << " ENDED ##################################" << std::endl;
     }
     if (calc_sim4)
     {
         Simulator4 sim4(dr);
         std::cout << "start sim4 " << ability << " " << anatomy << "##################################" << std::endl;
         sim4.precalc_ability(ability, anatomy);
-        std::cout << ability << " " << anatomy << "ENDED 4 ##################################" << std::endl;
+        std::cout << ability << " " << anatomy << " ENDED 4 ##################################" << std::endl;
     }
 
     
@@ -623,11 +624,11 @@ void commandLineCalculation(const InputParser & parser)
 
 void do_precalc_test()
 {
-    std::string anatomy = "AAABBC";
-    std::string ability = "CCCCC";
+    std::string anatomy = "AABCCD";
+    std::string ability = "AAAAA";
     DiceRoller dr{ 10 };
     bool calc_sim = true;
-    bool calc_dta = true;
+    bool calc_dta = false;
     bool calc_sim4 = false;
     if (calc_sim)
     {
@@ -647,8 +648,8 @@ void do_precalc_test()
 int main(int argc, char* argv[])
 {
     // TEST ####
-    //do_precalc_test();
-    //return 0;
+    do_precalc_test();
+    return 0;
     // TEST ####
 
     if (argc > 1)

@@ -31,7 +31,6 @@ public:
 	static const size_t slightlywild_anz_ = number_dice_ * 5;
 	static const size_t max_combo_store_size = twiceaswild_anz_;
 
-
 	Simulator(DiceRoller& rg);
 
 	std::vector<OddsResult> get_probability(std::string hero_name, const std::vector<std::string>& abilities, std::string diceanatomy, bool default_sim, bool chase, std::string chased_ability, std::vector<DiceIdx> org_dice, const CardData& cardData, size_t roll_atemps, size_t rerolls);
@@ -121,11 +120,35 @@ public:
 	void precalc_ability(std::string ability, std::string diceanatomy, bool calc_dta);
 	void precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
 
+	void get_all_sub_combis(size_t cp, size_t anzcards, const std::vector<DiceIdx>& combi, const std::unordered_map<std::string, std::vector<DiceThrow>>& save_db_last);
+	void precalc_ability_clever(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
+	void get_all_positive_combs_storage_lower_bound_clever(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target, const std::vector<Card>& cards, size_t cp, size_t use_max_cards);
+	
 	void precalc_ability_fast(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
 	void get_all_positive_combs_storage_upper_lower_bound(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target, const std::vector<Card>& cards, size_t cp, size_t use_max_cards);
 	void calc_all_points(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target_ability, int mincp, int mincards, int maxcp, int maxcards, std::vector<std::vector<std::vector<DiceThrow>>>& save_db, const  std::vector<Card>& cards);
 
-	
+	//precalc with matrixes
+	struct CardMatrixData
+	{
+		size_t cards_used = 0;
+		size_t cp_used = 0;
+		std::vector<DiceIdx> cards_combi = { 0,0,0,0,0,0,0,0 };
+		size_t number_cards = 0;
+
+		std::vector<Card> get_cards()
+		{
+			return Helpers::getCards(cards_combi[7], cards_combi[1], cards_combi[2], cards_combi[3], cards_combi[4], cards_combi[0], cards_combi[5], cards_combi[6]);
+		}
+	};
+
+	std::vector<DiceThrow> getPossibleListFromMatrix(size_t anzcp, size_t anzcards, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& combi, const std::vector<CardMatrixData>& matrices_data, const std::vector<Eigen::MatrixXi>& matrices);
+	void calculateMatrices(const CardMatrixData& mdata, std::vector<CardMatrixData>& matrices_data, std::vector<Eigen::MatrixXi>& matrices, const std::vector<Card>& card_matrices, const std::vector<Eigen::MatrixXi>& basic_matrices);
+	void createCardMatrix(const Card& card, Eigen::MatrixXi& markovMatrix);
+	void print_matrix_entry(size_t row, const std::string& name, const Eigen::MatrixXi& matrix);
+	void precalc_ability_matrix_test(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
+	void precalc_ability_matrix_part(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
+	void save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA);
 
 
 	//default one
@@ -229,6 +252,8 @@ public:
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_last2;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_upper;
 	std::vector<DiceThrow>* possible_list_with_cheat_dt_save_upper2;
+	std::vector<std::vector<DiceThrow>> save_db_big_{};
+
 	std::vector<DiceIdx> generator_anatomy;
 	std::vector<DiceIdx> generator_target;
 	bool possible_calced_{ false };

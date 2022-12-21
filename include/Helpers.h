@@ -22,6 +22,25 @@ public:
         last_db_path = "";
     }
 
+    void closeMatrixDB()
+    {
+        if (matrixdb != nullptr)
+        {
+            sqlite3_close(matrixdb);
+        }
+        last_matrixdb_path = "";
+    }
+
+    int choose(int n, int k)
+    {
+        if (k == 0)
+        {
+            return 1;
+        }
+        return (n * choose(n - 1, k - 1)) / k;
+    }
+       
+
     std::string sqlite_get_data(std::string table_name, std::string search, bool isDTA, bool sim4 = false)
     {
         int rc;                   /* Function return code */
@@ -67,6 +86,59 @@ public:
             txt1 = Zipper::string_decompress_decode(txt);
         }
         return txt1;
+    }
+
+    void sqlite_write_matrix_data(std::string key, std::string uncompressed_data, bool isDTA, bool sim4 = false)
+    {
+        std::string dbname = "Matrix.db";
+        if (sim4) dbname = "Matrix4.db";
+        if (isDTA) dbname = "MatrixDTA.db";
+        int rc;                   /* Function return code */
+
+        if (dbname != last_matrixdb_path || matrixdb == nullptr)
+        {
+            closeMatrixDB();
+            rc = sqlite3_open(dbname.c_str(), &matrixdb);
+            if (rc != SQLITE_OK)
+            {
+                std::cout << "database " << dbname << "is missing" << std::endl;
+                return;
+            }
+            last_matrixdb_path = dbname;
+            //create matrix table:
+            std::string table_name = "DTMatrix";
+
+            std::string createQuery = "CREATE TABLE IF NOT EXISTS " + table_name + " (key TEXT PRIMARY KEY, data TEXT);";
+            std::cout << createQuery << std::endl;
+            sqlite3_stmt* createStmt;
+            std::cout << "Creating Table Statement" << std::endl;
+            sqlite3_prepare(matrixdb, createQuery.c_str(), (int)createQuery.size(), &createStmt, NULL);
+            std::cout << "Stepping Table Statement" << std::endl;
+            if (sqlite3_step(createStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Create Table!" << std::endl;
+                return;
+            }
+            sqlite3_finalize(createStmt);
+        }
+
+        std::string table_name = "DTMatrix";
+        std::string insertQuery = "";
+        std::string data = Zipper::string_compress_encode(uncompressed_data);
+        insertQuery = "INSERT INTO \'" + table_name + "\' SELECT \'" + key + "\' AS key, \'" + data + "\' AS data;";
+        sqlite3_stmt* insertStmt;
+        if (sqlite3_prepare_v2(matrixdb, insertQuery.c_str(), -1, &insertStmt, NULL) == SQLITE_OK)
+        {
+            if (sqlite3_step(insertStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Insert Item!" << std::endl;
+            }
+        }
+        else
+        {
+            printf("%s: %s\n", sqlite3_errstr(sqlite3_extended_errcode(matrixdb)), sqlite3_errmsg(matrixdb));
+        }
+        sqlite3_finalize(insertStmt);
     }
 
     static size_t get_number_lines(const std::string& name)
@@ -406,6 +478,7 @@ public:
         Card c{};
         if (name == "sixit")
         {
+            c.name = "sixit";
             c.card_id = 0;
             c.lvl = lvl;
             c.cp_cost = 1;
@@ -422,6 +495,7 @@ public:
         }
         if (name == "samesis")
         {
+            c.name = "samesis";
             c.card_id = 1;
             c.lvl = lvl;
             c.cp_cost = 1;
@@ -446,6 +520,7 @@ public:
         }
         if (name == "tipit")
         {
+            c.name = "tipit";
             c.card_id = 2;
             c.lvl = lvl;
             c.cp_cost = 1;
@@ -468,6 +543,7 @@ public:
         }
         if (name == "wild")
         {
+            c.name = "wild";
             c.card_id = 3;
             c.lvl = lvl;
             c.cp_cost = 2;
@@ -488,6 +564,7 @@ public:
         }
         if (name == "twice as wild")
         {
+            c.name = "tawild";
             c.card_id = 4;
             c.lvl = lvl;
             c.cp_cost = 3;
@@ -512,6 +589,7 @@ public:
         }
         if (name == "slightly wild")
         {
+            c.name = "slightwild";
             c.card_id = 5;
             c.lvl = lvl;
             c.cp_cost = 1;
@@ -536,6 +614,7 @@ public:
         }
         if (name == "cheer")
         {
+            c.name = "cheer";
             c.card_id = 6;
             c.lvl = 1;
             c.cp_cost = 0;
@@ -544,6 +623,7 @@ public:
         }
         if (name == "probability manipulation")
         {
+            c.name = "probmani";
             c.card_id = 7;
             c.lvl = 1;
             c.cp_cost = 0;
@@ -623,5 +703,8 @@ public:
     
     sqlite3* db = nullptr;
     std::string last_db_path = "";
+
+    sqlite3* matrixdb = nullptr;
+    std::string last_matrixdb_path = "";
 
 };

@@ -64,6 +64,7 @@ struct Card
 	size_t cp_cost{ 1 };
 	size_t function_to_call{0};
 	size_t dice_manipulateable{ 0 };
+	std::string name{ "" };
 };
 
 struct Combinations

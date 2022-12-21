@@ -2308,7 +2308,7 @@ void Simulator4::precalc_ability(std::string ability_name, const std::vector<Dic
                         possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][max_cards]);
                     }
 
-                    if (cp != maxcp && anzcards != max_cards)
+                    if (cp != maxcp || anzcards != max_cards)
                     {
                         get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
                         save_db[cp][anzcards] = possible_list_with_cheat_dt;

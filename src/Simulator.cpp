@@ -3013,7 +3013,10 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy, bo
     {
         ability_name = ability + "-" + diceanatomy;
     }
-    precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
+    precalc_ability_matrix_part(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability_matrix_test(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability_clever(ability_name, target_ability, mydiceanatomy, calc_dta);
     //precalc_ability_fast(ability_name, target_ability, mydiceanatomy, calc_dta); //not so fast as thought
     return;
 }
@@ -3137,14 +3140,21 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
             continue;
         }
         
-        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1],  combi[2], combi[3],  combi[4],  combi[0], combi[5], combi[6]);
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
         
         size_t maxcp = 0;
         for (const auto& c : cards)
         {
             maxcp += c.cp_cost;
         }
-        size_t max_cards = cards.size();
+        size_t max_cards = 0;
+        for (const auto& t_card : cards)
+        {
+            if (t_card.card_id <= 5)
+            {
+                max_cards++;
+            }
+        }
 
         //the very first run is with 0 cp -> thats the default run with no cards
         size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
@@ -3199,7 +3209,7 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
                         
                         
 
-                        if (cp != maxcp && anzcards != max_cards)
+                        if (cp != maxcp || anzcards != max_cards)
                         {
                             get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
                             save_db[cp][anzcards] = possible_list_with_cheat_dt;
@@ -3275,6 +3285,1383 @@ void Simulator::precalc_ability(std::string ability_name, const std::vector<Dice
     }
     myfile.close();
 }
+
+
+void sort_combis(std::vector<std::vector<DiceIdx>>& erg)
+{
+    std::sort(erg.begin(), erg.end(), [](const std::vector<DiceIdx>& a, const std::vector<DiceIdx>& b)
+        {
+            size_t ca = std::count_if(a.begin(), a.end(), [](DiceIdx i) {return i > 0; });
+            size_t cb = std::count_if(b.begin(), b.end(), [](DiceIdx i) {return i > 0; });
+            ca += (a[5] >= 2) ? 1 : 0;
+            cb += (b[5] >= 2) ? 1 : 0;
+            return ca < cb;
+        });
+
+}
+
+void sort_combis2(std::vector<std::vector<DiceIdx>>& erg)
+{
+    std::sort(erg.begin(), erg.end(), [](const std::vector<DiceIdx>& a, const std::vector<DiceIdx>& b)
+        {
+            size_t ca = 0;
+            size_t cb = 0;
+            for (size_t i = 0; i < a.size(); i++)
+            {
+                ca += a[i];
+                cb += b[i];
+            }
+            return ca < cb;
+        });
+
+}
+
+std::vector<std::vector<DiceIdx>> get_max_combis(const std::vector<std::vector<DiceIdx>>& erg)
+{
+    std::vector<std::vector<DiceIdx>> erg2;
+    size_t maxlen = 0;
+    for (auto ai = erg.rbegin(); ai != erg.rend(); ai++)
+    {
+        const auto& a = (*ai);
+        size_t ca = std::count_if(a.begin(), a.end(), [](DiceIdx i) {return i > 0; });
+        ca += (a[5] >= 2) ? 1 : 0;
+        if (ca >= maxlen)
+        {
+            maxlen = ca;
+            erg2.push_back(a);
+        }
+        else
+        {
+            break;
+        }
+    }
+    return erg2;
+
+}
+
+void Simulator::get_all_sub_combis(size_t cp, size_t anzcards, const std::vector<DiceIdx>& combi, const std::unordered_map<std::string, std::vector<DiceThrow>>& save_db_last)
+{
+    save_db_big_.clear();
+    for (size_t i = 0; i < combi.size(); i++)
+    {
+        if (combi[i] == 0)
+        {
+            continue;
+        }
+        std::vector<DiceIdx> combi_copy = combi;
+        if (i == 5 && combi_copy[i]==2)
+        {
+            combi_copy[i] = 1;
+        }
+        else
+        {
+            combi_copy[i] = 0;
+        }
+        
+        std::vector<Card> cards = Helpers::getCards(combi_copy[7], combi_copy[1], combi_copy[2], combi_copy[3], combi_copy[4], combi_copy[0], combi_copy[5], combi_copy[6]);
+        size_t maxcp = 0;
+        for (const auto& c : cards)
+        {
+            maxcp += c.cp_cost;
+        }
+        size_t max_cards = 0;
+        for (const auto& t_card : cards)
+        {
+            if (t_card.card_id <= 5)
+            {
+                max_cards++;
+            }
+        }
+        size_t cur_cp = std::min(cp, maxcp);
+        size_t cur_cards = std::min(anzcards, max_cards);
+        std::stringstream ss;
+        ss << Helpers::get_cards_string(cards) << " " << cur_cp << " " << cur_cards;
+        std::string cstring = ss.str();
+        auto it = save_db_last.find(cstring);
+        if (it != save_db_last.end())
+        {
+            save_db_big_.push_back(it->second);
+        }
+    }
+}
+
+void Simulator::precalc_ability_clever(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
+{
+    bool use_upper_bound = true;
+    static const size_t cp_anz = 20;
+    static const size_t cards_anz = 11;
+    generator_anatomy = mydiceanatomy;
+    generator_target = target_ability;
+    //calculate every card-combination
+    std::vector<DiceIdx> stack;
+    size_t sampleCount = 8U;
+    std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
+    if (!isDTA)
+    {
+        options = { 0, 1, 2 };// maximum levels , 0 = no card
+    }
+    std::vector<std::vector<DiceIdx>> erg{};
+    std::vector<std::vector<DiceIdx>> erg2{};
+    Helpers::getCombinations(options, sampleCount, stack, erg);
+    erg.erase(erg.begin());
+    float max_anz = (isDTA ? 1129342.0F : 10366.0F) / 2.0F;
+    int done_counter_anz = 0;
+    // TODO CREATE FOLDER
+    //filename = "./precalcs/" + ability_name + ".txt";
+    std::string filename = "./precalcs/" + ability_name + ".txt";
+    if (isDTA)
+    {
+        filename = "./precalcsDTA/" + ability_name + ".txt";
+    }
+#ifdef __linux__
+    filename = "/content/drive/MyDrive/DTSimulatorTest/precalcs/" + ability_name + ".txt";
+#endif
+    size_t start_number_lines = 0;
+    if (Helpers::file_exists(filename))
+    {
+        start_number_lines = Helpers::get_number_lines(filename);
+        if (start_number_lines >= max_anz)
+        {
+            return;
+        }
+    }
+
+    std::ofstream myfile;
+    myfile.open(filename, std::ios::out | std::ios::app);
+    if (myfile.fail())
+    {
+        std::cout << " cant open file, make sure folder \"precalcs\" exists" << std::endl;
+        return;
+    }
+
+    //create database for speedup
+    std::vector<std::vector<std::vector<DiceThrow>>> save_db{};
+
+
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        std::vector<std::vector<DiceThrow>> s1{};
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            std::vector<DiceThrow> s2;
+            s2.resize(possible_combs_blow_up_size_);
+            s1.push_back(s2);
+        }
+        save_db.push_back(s1);
+    }
+
+    save_db_big_.clear();//used stuff for current
+    std::unordered_map<std::string, std::vector<DiceThrow>> save_db_last_1{};
+    std::unordered_map<std::string, std::vector<DiceThrow>> save_db_last_2{};
+    std::unordered_map<std::string, std::vector<DiceThrow>>* save_db_save = &save_db_last_1;
+    std::unordered_map<std::string, std::vector<DiceThrow>>* save_db_last = &save_db_last_2;
+    size_t size_last_erg = 1;
+    sort_combis(erg);
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    auto print_time = ((start_time - start_time) / std::chrono::milliseconds(1)) / 1000.0;
+
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+
+        bool swild = combi[0] >= 1;
+        bool samesis = combi[1] >= 1;
+        bool tip_it = combi[2] >= 1;
+        bool wild = combi[3] >= 1;
+        bool twiceWild = combi[4] >= 1;
+        bool sixit = combi[5] >= 1;
+
+        if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
+        {
+            continue;
+        }
+        if (combi[0] > 3 || combi[0] == 2) //slightly wild 1 and 2 dont differ (only you can use it on teammates)
+        {
+            continue;
+        }
+        if (combi[1] > 3) //samesis
+        {
+            continue;
+        }
+        if (combi[2] > 3) //tip it
+        {
+            continue;
+        }
+        if (combi[3] > 3) //wild
+        {
+            continue;
+        }
+        if (combi[4] > 4) //twice as wild has 4 different stages
+        {
+            continue;
+        }
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
+        {
+            continue;
+        }
+
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
+
+        size_t count_erg = std::count_if(combi.begin(), combi.end(), [](DiceIdx i) {return i > 0; });
+        count_erg += (combi[5] >= 2) ? 1 : 0;
+        bool use_big_db = count_erg >= 2;
+        if (count_erg > size_last_erg)
+        {
+            //swap databases
+            std::swap(save_db_save, save_db_last);
+            
+            //clear database to save current stuff
+            (*save_db_save).clear();
+
+            size_last_erg = count_erg;
+        }
+
+        size_t maxcp = 0;
+        for (const auto& c : cards)
+        {
+            maxcp += c.cp_cost;
+        }
+        size_t max_cards = 0;
+        for (const auto& t_card : cards)
+        {
+            if (t_card.card_id <= 5)
+            {
+                max_cards++;
+            }
+        }
+
+        //the very first run is with 0 cp -> thats the default run with no cards
+        size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
+        //clear saved list, it has to be calculated new
+
+        if (max_cards >= 20 || maxcp >= 20)
+        {
+            std::cout << " anzcards or cp TO BIG " << max_cards << " " << maxcp << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < cp_anz; i++)
+        {
+            for (size_t j = 0; j < cards_anz; j++)
+            {
+                save_db[i][j].clear();
+            }
+        }
+        for (size_t cp = 0; cp <= maxcp; cp++)
+        {
+            for (size_t anzcards = 0; anzcards <= max_cards; anzcards++)
+            {
+                if (start_number_lines <= done_counter_anz)
+                {
+
+                    if (use_big_db)
+                    {
+                        get_all_sub_combis(cp, anzcards, combi, *save_db_last);
+                    }
+                    std::stringstream ss;
+                    ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
+                    std::string current_card_string = ss.str();
+                    possible_list_with_cheat_dt_save_last2 = nullptr;
+                    possible_list_with_cheat_dt_save_last = nullptr;
+                    if (cp > 0)
+                    {
+                        possible_list_with_cheat_dt_save_last2 = &(save_db[cp - 1][anzcards]);
+                    }
+                    if (anzcards > 0)
+                    {
+                        possible_list_with_cheat_dt_save_last = &(save_db[cp][anzcards - 1]);
+                    }
+
+                    get_all_positive_combs_storage_lower_bound_clever(mydiceanatomy, target_ability, cards, cp, anzcards);
+                    save_db[cp][anzcards] = possible_list_with_cheat_dt;
+
+                    auto end_time = std::chrono::high_resolution_clock::now();
+                    auto time = end_time - start_time;
+                    auto tmili = (time / std::chrono::milliseconds(1)) / 1000.0;
+
+                    (*save_db_save)[current_card_string] = possible_list_with_cheat_dt;
+
+                    if (tmili > print_time)
+                    {
+                        print_time = tmili + 5;
+                        float done = (done_counter_anz - start_number_lines) / (max_anz);
+                        double timefor100 = tmili / done;
+                        double tmin = tmili / 60.0;
+                        double proz_done = done_counter_anz / (max_anz);
+                        double time_remain = (timefor100 - (proz_done * timefor100)) / (60.0);
+                        std::cout << ability_name << " " << ss.str() << " took " << tmin << " min, " << " remain: " << time_remain << " min, " << int(10000.0 * proz_done) / 100.0 << "%" << std::endl;
+                        //std::cout << ability_name << " " << ss.str() << " remaining time: " << time_remain << " min, " << time_remain/60.0 << " h " << std::endl;
+                    }
+                    size_t counter = 0;
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        if (data.success)
+                        {
+                            counter++;
+                        }
+                    }
+                    ss << std::endl;// << counter << ";";
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        ss << data.get_save_string();
+                    }
+                    myfile << ss.str() << std::endl;
+                }
+                done_counter_anz++;
+            }
+        }
+        if (start_number_lines <= done_counter_anz)
+        {
+            myfile.close();
+            myfile.open(filename, std::ios::out | std::ios::app);
+            if (myfile.fail())
+            {
+                for (size_t i = 0; i < cp_anz; i++)
+                {
+                    for (size_t j = 0; j < cards_anz; j++)
+                    {
+                        save_db[i][j].clear();
+                    }
+                }
+                std::cout << " cant open file" << std::endl;
+                return;
+            }
+        }
+    }
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            save_db[i][j].clear();
+        }
+    }
+    myfile.close();
+}
+
+std::string print_dice(const std::vector<DiceIdx>& dice)
+{
+    std::stringstream ss;
+    for (size_t i = 0; i < dice.size(); i++)
+    {
+        ss << std::to_string(dice[i]+1);;
+    }
+        
+    return ss.str();
+}
+
+void Simulator::print_matrix_entry(size_t row_idx, const std::string& name, const Eigen::MatrixXi& matrix)
+{
+    const auto& data = all_combs[number_dice_ - 1];
+    std::cout << "print entries for " << name << " and " << print_dice(data.combs_sorted[row_idx]) << std::endl;
+    size_t ammount = 0;
+    for (size_t i = 0; i < data.combs_sorted.size(); i++)
+    {
+        if (matrix(row_idx, i) >= 1)
+        {
+            std::cout << print_dice(data.combs_sorted[i]) << " idx: "<< i << std::endl;
+            ammount++;
+        }
+        
+    }
+    std::cout << ammount << "/" << data.combs_sorted.size() << std::endl;
+}
+
+std::vector<std::vector<size_t>> calc_all_permuts(const std::vector<Card>& cards, std::vector<size_t> v)
+{
+    std::vector<size_t> dont_sort{1,2,7}; // samesis, tipit, prob manipulation
+    std::vector<size_t> v2 = v;
+    std::vector<size_t> done = {};
+    std::vector<std::vector<size_t>> ergs;
+    do
+    {
+        std::vector<size_t> v3 = v2;
+        size_t start_i = 0;
+        for (size_t i = 0; i < v3.size(); i++)
+        {
+            bool found = false;
+            for (size_t j = 0; j < dont_sort.size(); j++)
+            {
+                if (cards[v3[i]].card_id == dont_sort[j])
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+            {
+                std::sort(v3.begin() + start_i, v3.begin() + i);
+                start_i = i+1;
+            }
+        }
+        std::sort(v3.begin() + start_i, v3.begin() + v3.size());
+
+        size_t number = 1;
+        for (size_t i = 0; i < v3.size(); i++)
+        {
+            number = number * 10 + v3[i];
+        }
+        bool found = false;
+        for (const auto& n : done)
+        {
+            if (n == number)
+            {
+                found = true;
+                break;
+            }
+            
+        }
+        if (!found)
+        {
+            done.push_back(number);
+            ergs.push_back(v3);
+        }
+
+
+    } while (std::next_permutation(v2.begin(), v2.end()));
+    //std::cout << "reduced permuts " << done.size() << std::endl;
+    return ergs;
+}
+
+void Simulator::calculateMatrices(const CardMatrixData& mdata, std::vector<CardMatrixData>& matrices_data, std::vector<Eigen::MatrixXi>& matrices, const std::vector<Card>& card_matrices, const std::vector<Eigen::MatrixXi>& basic_matrices)
+{
+    const size_t maxcp = mdata.cp_used;
+    const size_t maxcards = mdata.cards_used;
+    size_t mat_size = possible_combs_.size();
+
+    Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
+    tempmat.setIdentity();
+
+    //DEBUGGING:##
+    std::vector<DiceIdx> target_cards_combi = { 0,0,0,0,2,0,0,2 };
+    bool debug_found = true;
+    size_t debug_cp = 2;
+    size_t debug_cards = 1;
+    for (size_t i = 0; i < mdata.cards_combi.size(); i++)
+    {
+        if (mdata.cards_combi[i] != target_cards_combi[i])
+        {
+            debug_found = false;
+        }
+    }
+    if (debug_found)
+    {
+        std::cout << "start debugging..." << std::endl;
+    }
+    //############
+
+    size_t matrice_data_size_start = matrices_data.size();
+
+    for (size_t anzcp = 0; anzcp <= maxcp; anzcp++)
+    {
+        //reset matrix
+        tempmat.setIdentity();
+        for (size_t anzcards = 0; anzcards <= maxcards; anzcards++)
+        {
+            if (anzcards == maxcards && anzcp == maxcp)
+            {
+                continue;
+            }
+            if (debug_found && anzcp == debug_cp && anzcards == debug_cards)
+            {
+                std::cout << "start debug" << std::endl;
+            }
+            CardMatrixData temp_data = mdata;
+            temp_data.cards_used = anzcards;
+            temp_data.cp_used = anzcp;
+            for (size_t i = 0; i < matrice_data_size_start; i++)
+            {
+                const auto& md = matrices_data[i];
+                if (md.cp_used > anzcp || md.cards_used > anzcards)
+                {
+                    continue;
+                }
+                
+                if (md.number_cards + 1 != mdata.number_cards)
+                {
+                    continue;
+                }
+
+                bool has_other_card = false;
+                for (size_t j = 0; j < md.cards_combi.size(); j++)
+                {
+                    if (md.cards_combi[j] >= 1 && mdata.cards_combi[j] == 0)
+                    {
+                        has_other_card = true;
+                        break;
+                    }
+                    if (j != 5 && mdata.cards_combi[j] > 0 && md.cards_combi[j] != 0 && md.cards_combi[j] != mdata.cards_combi[j])
+                    {
+                        has_other_card = true;
+                        break;
+                    }
+                }
+                //special test for prob manipulation 
+                if (md.cards_combi[5] == 2 && mdata.cards_combi[5] == 1)
+                {
+                    //other data has to many prob manipulations!
+                    has_other_card = true;
+                }
+                if (has_other_card)
+                {
+                    continue;
+                }
+                //add its matrice to tempmat:
+                tempmat = tempmat + matrices[i];
+            }
+
+            //equalize matrice:
+            for (size_t i = 0; i < mat_size; i++)
+            {
+                for (size_t j = 0; j < mat_size; j++)
+                {
+                    if (tempmat(i, j) >= 1)
+                    {
+                        tempmat(i, j) = 1;
+                    }
+                }
+            }
+
+            //add matrice
+            matrices_data.push_back(temp_data);
+            matrices.push_back(tempmat);
+        }
+    }
+    
+
+    //final step: calculate the full matrice:
+    std::vector<Card> cards = Helpers::getCards(
+        mdata.cards_combi[7], 
+        mdata.cards_combi[1], 
+        mdata.cards_combi[2], 
+        mdata.cards_combi[3], 
+        mdata.cards_combi[4], 
+        mdata.cards_combi[0], 
+        mdata.cards_combi[5], 
+        mdata.cards_combi[6]);
+
+    //collect all indexes of cards used in combi
+    std::vector<size_t> v;
+    for (size_t i = 0; i < cards.size(); i++)
+    {
+        for (size_t j = 0; j < card_matrices.size(); j++)
+        {
+            if (cards[i].card_id == card_matrices[j].card_id && cards[i].function_to_call == card_matrices[j].function_to_call)
+            {
+                v.push_back(j);
+                break;
+            }
+        }        
+    }
+    std::sort(v.begin(), v.end());
+
+    std::vector<std::vector<size_t>> all_permuts = calc_all_permuts(card_matrices, v);
+    size_t maxpermuts = all_permuts.size();
+    Eigen::MatrixXi result_mat = Eigen::MatrixXi(mat_size, mat_size);
+    result_mat.setIdentity();
+    size_t permuts = 0;
+
+    for (size_t i = 0; i < maxpermuts; i++)
+    {
+        Eigen::MatrixXi temp_mat = Eigen::MatrixXi(mat_size, mat_size);
+        temp_mat.setIdentity();
+        const std::vector<size_t>& vi = all_permuts[i];
+        for (size_t j = 0; j < vi.size(); j++)
+        {
+            temp_mat = temp_mat * basic_matrices[vi[j]];
+        }
+        result_mat = result_mat + temp_mat;
+    }
+
+    //equalize matrice:
+    for (size_t i = 0; i < mat_size; i++)
+    {
+        for (size_t j = 0; j < mat_size; j++)
+        {
+            if (result_mat(i, j) >= 1)
+            {
+                result_mat(i, j) = 1;
+            }
+        }
+    }
+    matrices_data.push_back(mdata);
+    matrices.push_back(result_mat);
+
+}
+
+std::vector<DiceThrow> Simulator::getPossibleListFromMatrix(size_t anzcp, size_t anzcards, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& combi, const std::vector<CardMatrixData>& matrices_data, const std::vector<Eigen::MatrixXi>& matrices)
+{
+    size_t mat_size = possible_combs_.size();
+    std::vector<DiceThrow> pos_list = possible_list_with_cheat_dt;
+    size_t matIdx = 0;
+
+    //DEBUGGING:##
+    /*std::vector<DiceIdx> target_cards_combi = {0,0,0,1,0,0,1,1};
+    bool debug_found = true;
+    for (size_t i = 0; i < combi.size(); i++)
+    {
+        if (target_cards_combi[i] != combi[i])
+        {
+            debug_found = false;
+        }
+    }
+    if (debug_found)
+    {
+        std::cout << "start debugging..." << std::endl;
+    }*/
+    //############
+
+    for (size_t i = 0; i < matrices_data.size(); i++)
+    {
+        const auto& md = matrices_data[i];
+        if (md.cp_used != anzcp || md.cards_used != anzcards)
+        {
+            continue;
+        }
+
+        bool has_other_card = false;
+        for (size_t j = 0; j < md.cards_combi.size(); j++)
+        {
+            if (md.cards_combi[j] != combi[j])
+            {
+                has_other_card = true;
+                break;
+            }
+        }
+        if (has_other_card)
+        {
+            continue;
+        }
+
+        matIdx = i;
+        break;
+    }
+    
+    const auto& matrix = matrices[matIdx];
+
+    const auto& data = all_combs[number_dice_ - 1];
+
+    for (auto& dthrow : pos_list)
+    {
+        dthrow.success = false;
+
+        size_t hash_i = get_hash(dthrow);
+        size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+
+        for (size_t i = 0; i < mat_size; i++)
+        {
+            std::vector<DiceIdx> current_ability{0,0,0,0,0,0};
+            if (matrix(matrix_idx_i, i) == 0)
+            {
+                continue;
+            }
+            for (size_t j = 0; j < number_dice_; j++)
+            {
+                current_ability[mydiceanatomy[data.combs_sorted[i][j]]]++;
+            }
+
+            bool found = true;
+            for (size_t j = 0; j < target_ability.size(); j++)
+            {
+                if (target_ability[j] > current_ability[j])
+                {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+            {
+                dthrow.success = true;
+                break;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
+    {
+        const auto& a = possible_list_with_cheat_dt[i];
+        const auto& b = pos_list[i];
+        if (a.success != b.success)
+        {
+            std::cout << i <<" ERROR IN MATRIX CALCULATIONS cp "<< anzcp <<" card "<< anzcards << " combi " ;
+            for (const auto& co : combi)
+            {
+                std::cout << std::to_string(co);
+            }
+            std::vector<Card> cards = Helpers::getCards(
+                combi[7],
+                combi[1],
+                combi[2],
+                combi[3],
+                combi[4],
+                combi[0],
+                combi[5],
+                combi[6]);
+            for (const auto& co : cards)
+            {
+                std::cout << " " << co.name;
+            }
+            std::cout << std::endl;
+            std::cout << " error in " << pos_list[i].get_string() << " matrix selected: "<< matIdx << std::endl;
+            std::cout << "old " << a.get_string()<< " vs new "<< b.get_string() << std::endl;
+            size_t hash_i = get_hash(pos_list[i]);
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+            print_matrix_entry(matrix_idx_i, "cards above", matrix);
+
+            return pos_list;
+        }
+    }
+    return pos_list;
+
+}
+
+void Simulator::save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA)
+{
+    std::vector<Card> cards = Helpers::getCards(
+        mdata.cards_combi[7],
+        mdata.cards_combi[1],
+        mdata.cards_combi[2],
+        mdata.cards_combi[3],
+        mdata.cards_combi[4],
+        mdata.cards_combi[0],
+        mdata.cards_combi[5],
+        mdata.cards_combi[6]);
+    std::stringstream ss;
+    ss << Helpers::get_cards_string(cards) << " " << mdata.cp_used << " " << mdata.cards_used;
+    std::string key = ss.str();
+
+    std::stringstream sss;
+    sss << matrix;
+    std::string data = sss.str();
+    bool sim4 = number_dice_ == 4;
+    helper.sqlite_write_matrix_data(key, data, isDTA, sim4);
+}
+
+std::vector<std::vector<DiceIdx>> get_all_sub_combs(std::vector<DiceIdx> data, bool isDTA)
+{
+    std::vector<std::vector<DiceIdx>> result{};
+    std::vector<DiceIdx> stack;
+    size_t sampleCount = 8U;
+    std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
+    if (!isDTA)
+    {
+        options = { 0, 1, 2 };// maximum levels , 0 = no card
+    }
+    std::vector<std::vector<DiceIdx>> erg{};
+    Helpers::getCombinations(options, sampleCount, stack, erg);
+    erg.erase(erg.begin());
+    sort_combis(erg);
+
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+        bool not_part = false;
+        for (size_t i = 0; i < combi.size(); i++)
+        {
+            
+            if (combi[i] == 0)
+            {
+                continue;
+            }
+            //combi i >= 1
+            if (data[i] == 0)
+            {
+                not_part = true;
+                break;
+            }
+
+            if (i == 5)
+            {
+                if (data[i] < combi[i])
+                {
+                    not_part = true;
+                    break;
+                }
+                continue;
+            }
+
+            if (data[i] != combi[i])
+            {
+                not_part = true;
+                break;
+            }
+
+        }
+        
+        if (not_part) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        result.push_back(combi);
+    }
+    return result;
+}
+
+void Simulator::precalc_ability_matrix_part(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
+{
+    generator_anatomy = mydiceanatomy;
+    generator_target = target_ability;
+    //calculate every card-combination
+    std::vector<DiceIdx> stack;
+    size_t sampleCount = 8U;
+    std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
+    if (!isDTA)
+    {
+        options = { 0, 1, 2 };// maximum levels , 0 = no card
+    }
+    std::vector<std::vector<DiceIdx>> erg{};
+    Helpers::getCombinations(options, sampleCount, stack, erg);
+    erg.erase(erg.begin());
+    sort_combis(erg);
+
+    std::vector<std::vector<DiceIdx>> erg2{};
+   
+
+    
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+
+        if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
+        {
+            continue;
+        }
+        if (combi[0] > 3 || combi[0] == 2) //slightly wild 1 and 2 dont differ (only you can use it on teammates)
+        {
+            continue;
+        }
+        if (combi[1] > 3) //samesis
+        {
+            continue;
+        }
+        if (combi[2] > 3) //tip it
+        {
+            continue;
+        }
+        if (combi[3] > 3) //wild
+        {
+            continue;
+        }
+        if (combi[4] > 4) //twice as wild has 4 different stages
+        {
+            continue;
+        }
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
+        {
+            continue;
+        }
+        erg2.push_back(combi);
+    }
+    std::vector<std::vector<DiceIdx>> erg3 = get_max_combis(erg2);
+    sort_combis2(erg3);
+    std::cout << "max combis " << erg3.size() << std::endl;
+
+    erg2.clear();
+    size_t sampleCount2 = 8U;
+    std::vector<DiceIdx> options2 = { 0, 1 };// 0 = no card
+    stack.clear();
+    Helpers::getCombinations(options2, sampleCount2, stack, erg2);
+    erg2.erase(erg2.begin());
+    sort_combis(erg2);
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    auto print_time = ((start_time - start_time) / std::chrono::milliseconds(1)) / 1000.0;
+    auto start_time123 = std::chrono::high_resolution_clock::now();
+
+    for (const auto& maxerg : erg3)
+    {
+        erg.clear();
+        erg = get_all_sub_combs(maxerg, isDTA);
+
+        std::vector<Card> card_matrices;
+        std::vector<Eigen::MatrixXi> matrices;
+        std::vector<Eigen::MatrixXi> basic_matrices;
+        std::vector<CardMatrixData> matrices_data;
+
+        for (const std::vector<DiceIdx>& combi : erg)
+        {
+
+            std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
+
+            size_t count_erg = cards.size(); // cards.size is correct here!
+
+            if (count_erg == 1)
+            {
+                const auto& c = cards[0];
+                Eigen::MatrixXi mat = Eigen::MatrixXi(1, 1);
+                createCardMatrix(c, mat);
+                card_matrices.emplace_back(c);
+
+                basic_matrices.push_back(mat);
+                matrices.emplace_back(mat);
+
+                CardMatrixData mdata{};
+                mdata.number_cards = count_erg;
+                mdata.cards_combi = combi;
+                for (const auto& t_card : cards)
+                {
+                    mdata.cp_used += t_card.cp_cost;
+                    if (t_card.card_id <= 5)
+                    {
+                        mdata.cards_used++;
+                    }
+                }
+                matrices_data.emplace_back(mdata);
+            }
+
+            if (count_erg >= 2)
+            {
+                CardMatrixData mdata{};
+                mdata.number_cards = count_erg;
+                mdata.cards_combi = combi;
+                for (const auto& t_card : cards)
+                {
+                    mdata.cp_used += t_card.cp_cost;
+                    if (t_card.card_id <= 5)
+                    {
+                        mdata.cards_used++;
+                    }
+                }
+
+                calculateMatrices(mdata, matrices_data, matrices, card_matrices, basic_matrices);
+
+                auto end_time123 = std::chrono::high_resolution_clock::now();
+                auto time123 = end_time123 - start_time123;
+                auto tmili123 = (time123 / std::chrono::milliseconds(1)) / 1000.0;
+                double tmin123 = tmili123 / 60.0;
+                std::cout << "permuts: " << count_erg << " all mat calcs done in " << tmin123 << " min" << std::endl;
+            }
+        }
+
+        // save matrixes to SQLITE
+        auto save_time = std::chrono::high_resolution_clock::now();
+        std::cout << "saving matrices" << std::endl;
+        for (size_t i = 0; i < matrices_data.size(); i++)
+        {
+            save_matrix_to_sqlite(matrices_data[i], matrices[i], isDTA);
+        }
+        auto save_time2 = std::chrono::high_resolution_clock::now();
+        auto save123 = save_time2 - save_time;
+        auto tmilisave = (save123 / std::chrono::milliseconds(1)) / 1000.0;
+        double tminsave = tmilisave / 60.0;
+        std::cout <<"saving done in " << tminsave << " min" << std::endl;
+    }
+    std::cout << "finished matrix calculations" << std::endl;
+}
+
+void Simulator::precalc_ability_matrix_test(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
+{
+    bool use_upper_bound = true;
+    static const size_t cp_anz = 20;
+    static const size_t cards_anz = 11;
+    generator_anatomy = mydiceanatomy;
+    generator_target = target_ability;
+    //calculate every card-combination
+    std::vector<DiceIdx> stack;
+    size_t sampleCount = 8U;
+    std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
+    if (!isDTA)
+    {
+        options = { 0, 1, 2 };// maximum levels , 0 = no card
+    }
+    std::vector<std::vector<DiceIdx>> erg{};
+    std::vector<std::vector<DiceIdx>> erg2{};
+    Helpers::getCombinations(options, sampleCount, stack, erg);
+    erg.erase(erg.begin());
+    float max_anz = (isDTA ? 1129342.0F : 10366.0F) / 2.0F;
+    int done_counter_anz = 0;
+    // TODO CREATE FOLDER
+    //filename = "./precalcs/" + ability_name + ".txt";
+    std::string filename = "./precalcs/" + ability_name + ".txt";
+    if (isDTA)
+    {
+        filename = "./precalcsDTA/" + ability_name + ".txt";
+    }
+#ifdef __linux__
+    filename = "/content/drive/MyDrive/DTSimulatorTest/precalcs/" + ability_name + ".txt";
+#endif
+    size_t start_number_lines = 0;
+    /*if (Helpers::file_exists(filename))
+    {
+        start_number_lines = Helpers::get_number_lines(filename);
+        if (start_number_lines >= max_anz)
+        {
+            return;
+        }
+    }*/
+
+    std::cout << "startlines set to 0 because of TEST" << std::endl;
+
+    std::ofstream myfile;
+    myfile.open(filename, std::ios::out | std::ios::app);
+    if (myfile.fail())
+    {
+        std::cout << " cant open file, make sure folder \"precalcs\" exists" << std::endl;
+        return;
+    }
+
+
+    sort_combis(erg);
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    auto print_time = ((start_time - start_time) / std::chrono::milliseconds(1)) / 1000.0;
+
+    std::vector<Card> card_matrices;
+    std::vector<Eigen::MatrixXi> matrices;
+    std::vector<Eigen::MatrixXi> basic_matrices;
+    std::vector<CardMatrixData> matrices_data;
+
+    auto start_time123 = std::chrono::high_resolution_clock::now();
+    //matrix calculations
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+
+        if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
+        {
+            continue;
+        }
+        if (combi[0] > 3 || combi[0] == 2) //slightly wild 1 and 2 dont differ (only you can use it on teammates)
+        {
+            continue;
+        }
+        if (combi[1] > 3) //samesis
+        {
+            continue;
+        }
+        if (combi[2] > 3) //tip it
+        {
+            continue;
+        }
+        if (combi[3] > 3) //wild
+        {
+            continue;
+        }
+        if (combi[4] > 4) //twice as wild has 4 different stages
+        {
+            continue;
+        }
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
+        {
+            continue;
+        }
+
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
+
+        size_t count_erg = cards.size(); // cards.size is correct here!
+        
+
+        if (count_erg == 1)
+        {
+            const auto& c = cards[0];
+            Eigen::MatrixXi mat = Eigen::MatrixXi(1, 1);
+            createCardMatrix(c, mat);
+            card_matrices.emplace_back(c);
+
+            basic_matrices.push_back(mat);
+            matrices.emplace_back(mat);
+
+            CardMatrixData mdata{};
+            mdata.number_cards = count_erg;
+            mdata.cards_combi = combi;
+            for (const auto& t_card : cards)
+            {
+                mdata.cp_used += t_card.cp_cost;
+                if (t_card.card_id <= 5)
+                {
+                    mdata.cards_used++;
+                }
+            }
+            matrices_data.emplace_back(mdata);
+        }
+
+        if (count_erg == 4)
+        {
+            std::cout << "TEST BREAK" << std::endl;
+            break;
+        }
+
+        if (count_erg >= 2)
+        {
+            CardMatrixData mdata{};
+            mdata.number_cards = count_erg;
+            mdata.cards_combi = combi;
+            for (const auto& t_card : cards)
+            {
+                mdata.cp_used += t_card.cp_cost;
+                if (t_card.card_id <= 5)
+                {
+                    mdata.cards_used++;
+                }
+            }
+
+            calculateMatrices(mdata, matrices_data, matrices, card_matrices, basic_matrices);
+
+            auto end_time123 = std::chrono::high_resolution_clock::now();
+            auto time123 = end_time123 - start_time123;
+            auto tmili123 = (time123 / std::chrono::milliseconds(1)) / 1000.0;
+            double tmin123 = tmili123 / 60.0;
+            std::cout << "permuts: "<< count_erg <<" all mat calcs done in " << tmin123<< " min" << std::endl;
+        }
+
+    }
+
+    //REAL calculations
+
+    //create database for speedup
+    std::vector<std::vector<std::vector<DiceThrow>>> save_db{};
+
+
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        std::vector<std::vector<DiceThrow>> s1{};
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            std::vector<DiceThrow> s2;
+            s2.resize(possible_combs_blow_up_size_);
+            s1.push_back(s2);
+        }
+        save_db.push_back(s1);
+    }
+
+    for (const std::vector<DiceIdx>& combi : erg)
+    {
+
+        bool swild = combi[0] >= 1;
+        bool samesis = combi[1] >= 1;
+        bool tip_it = combi[2] >= 1;
+        bool wild = combi[3] >= 1;
+        bool twiceWild = combi[4] >= 1;
+        bool sixit = combi[5] >= 1;
+
+        if (!isDTA && combi[0] >= 1)
+        {
+            continue;
+        }
+        if (!isDTA && (combi[1] >= 2 || combi[2] >= 2 || combi[3] >= 2 || combi[4] >= 2 || combi[6] >= 2 || combi[7] >= 2))
+        {
+            continue;
+        }
+        if (combi[0] > 3 || combi[0] == 2) //slightly wild 1 and 2 dont differ (only you can use it on teammates)
+        {
+            continue;
+        }
+        if (combi[1] > 3) //samesis
+        {
+            continue;
+        }
+        if (combi[2] > 3) //tip it
+        {
+            continue;
+        }
+        if (combi[3] > 3) //wild
+        {
+            continue;
+        }
+        if (combi[4] > 4) //twice as wild has 4 different stages
+        {
+            continue;
+        }
+        if (combi[5] > 2) //probbiltiy manipulation 0,1,2
+        {
+            continue;
+        }
+        if (combi[6] > 1) //cheer 0,1
+        {
+            continue;
+        }
+        if (combi[7] > 2) //sixit
+        {
+            continue;
+        }
+
+        std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
+
+        size_t maxcp = 0;
+        for (const auto& c : cards)
+        {
+            maxcp += c.cp_cost;
+        }
+        
+        size_t max_cards = 0;
+        for (const auto& t_card : cards)
+        {
+            if (t_card.card_id <= 5)
+            {
+                max_cards++;
+            }
+        }
+        //the very first run is with 0 cp -> thats the default run with no cards
+        size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
+        //clear saved list, it has to be calculated new
+
+        if (max_cards >= 20 || maxcp >= 20)
+        {
+            std::cout << " anzcards or cp TO BIG " << max_cards << " " << maxcp << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < cp_anz; i++)
+        {
+            for (size_t j = 0; j < cards_anz; j++)
+            {
+                save_db[i][j].clear();
+            }
+        }
+        possible_list_with_cheat_dt_save_upper = nullptr;
+        for (size_t cp = 0; cp <= maxcp; cp++)
+        {
+            for (size_t anzcards = 0; anzcards <= max_cards; anzcards++)
+            {
+                if (start_number_lines <= done_counter_anz)
+                {
+                    std::stringstream ss;
+                    ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
+                    possible_list_with_cheat_dt_save_last2 = nullptr;
+                    possible_list_with_cheat_dt_save_last = nullptr;
+                    if (cp > 0)
+                    {
+                        possible_list_with_cheat_dt_save_last2 = &(save_db[cp - 1][anzcards]);
+                    }
+                    if (anzcards > 0)
+                    {
+                        possible_list_with_cheat_dt_save_last = &(save_db[cp][anzcards - 1]);
+                    }
+                    if (use_upper_bound)
+                    {
+                        // 306 sec -> 30% aabb
+                        // 306 -> !1.51% ccccc
+                        if (possible_list_with_cheat_dt_save_upper == nullptr)
+                        {
+                            possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][max_cards]);
+                            if (possible_list_with_cheat_dt_save_upper->empty())
+                            {
+                                get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, maxcp, max_cards);
+                                save_db[maxcp][max_cards] = possible_list_with_cheat_dt;
+                                possible_list_with_cheat_dt_save_upper = &(save_db[maxcp][max_cards]);
+                            }
+                        }
+
+
+
+                        if (cp != maxcp || anzcards != max_cards)
+                        {
+                            get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
+                            save_db[cp][anzcards] = possible_list_with_cheat_dt;
+                        }
+                        else
+                        {
+                            possible_list_with_cheat_dt = save_db[maxcp][max_cards];
+                        }
+                    }
+                    else
+                    {
+                        //300 sec for 36% aabb
+                        //306 sec -> 1.5% ccccc
+                        get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
+                        save_db[cp][anzcards] = possible_list_with_cheat_dt;
+                    }
+                    auto end_time = std::chrono::high_resolution_clock::now();
+                    auto time = end_time - start_time;
+                    auto tmili = (time / std::chrono::milliseconds(1)) / 1000.0;
+                    if (tmili > print_time)
+                    {
+                        print_time = tmili + 5;
+                        float done = (done_counter_anz - start_number_lines) / (max_anz);
+                        double timefor100 = tmili / done;
+                        double tmin = tmili / 60.0;
+                        double proz_done = done_counter_anz / (max_anz);
+                        double time_remain = (timefor100 - (proz_done * timefor100)) / (60.0);
+                        std::cout << ability_name << " " << ss.str() << " took " << tmin << " min, " << " remain: " << time_remain << " min, " << int(10000.0 * proz_done) / 100.0 << "%" << std::endl;
+                        //std::cout << ability_name << " " << ss.str() << " remaining time: " << time_remain << " min, " << time_remain/60.0 << " h " << std::endl;
+                    }
+
+                    if (cards.size() >= 1)
+                    {
+                        getPossibleListFromMatrix(cp, anzcards, target_ability, mydiceanatomy, combi, matrices_data, matrices);
+                        get_all_positive_combs_storage_lower_bound(mydiceanatomy, target_ability, cards, cp, anzcards);
+                    }
+                    
+
+                    size_t counter = 0;
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        if (data.success)
+                        {
+                            counter++;
+                        }
+                    }
+                    ss << std::endl;// << counter << ";";
+                    for (const auto& data : possible_list_with_cheat_dt)
+                    {
+                        ss << data.get_save_string();
+                    }
+                    myfile << ss.str() << std::endl;
+                }
+                done_counter_anz++;
+            }
+        }
+        if (start_number_lines <= done_counter_anz)
+        {
+            myfile.close();
+            myfile.open(filename, std::ios::out | std::ios::app);
+            if (myfile.fail())
+            {
+                for (size_t i = 0; i < cp_anz; i++)
+                {
+                    for (size_t j = 0; j < cards_anz; j++)
+                    {
+                        save_db[i][j].clear();
+                    }
+                }
+                std::cout << " cant open file" << std::endl;
+                return;
+            }
+        }
+    }
+    for (size_t i = 0; i < cp_anz; i++)
+    {
+        for (size_t j = 0; j < cards_anz; j++)
+        {
+            save_db[i][j].clear();
+        }
+    }
+    myfile.close();
+}
+
+
 
 void Simulator::calc_all_points(const std::vector<DiceIdx> & mydiceanatomy, const std::vector<DiceIdx>& target_ability, int mincp, int mincards, int maxcp, int maxcards, std::vector<std::vector<std::vector<DiceThrow>>>& save_db, const  std::vector<Card>& cards)
 {
@@ -3427,7 +4814,6 @@ void Simulator::calc_all_points(const std::vector<DiceIdx> & mydiceanatomy, cons
     return;
 }
 
-
 void Simulator::precalc_ability_fast(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
 {   
     //1400sec , 99.67%
@@ -3554,8 +4940,14 @@ void Simulator::precalc_ability_fast(std::string ability_name, const std::vector
         {
             maxcp += c.cp_cost;
         }
-        size_t max_cards = cards.size();
-
+        size_t max_cards = 0;
+        for (const auto& t_card : cards)
+        {
+            if (t_card.card_id <= 5)
+            {
+                max_cards++;
+            }
+        }
         //the very first run is with 0 cp -> thats the default run with no cards
         size_t tempcp = done_counter_anz == 0 ? 0 : std::min((size_t)1, maxcp);
         //clear saved list, it has to be calculated new
@@ -3650,6 +5042,7 @@ void Simulator::precalc_ability_fast(std::string ability_name, const std::vector
     }
     myfile.close();
 }
+
 
 
 bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
@@ -3790,6 +5183,77 @@ void Simulator::test_loaded_and_gen()
 // CODE FOR PRE-CALCULATING DATA #############################################################################################################################################
 // CODE FOR PRE-CALCULATING DATA #############################################################################################################################################
 // CODE FOR PRE-CALCULATING DATA #############################################################################################################################################
+
+void Simulator::createCardMatrix(const Card& card, Eigen::MatrixXi& markovMatrix)
+{
+
+    size_t n = possible_combs_.size();
+    markovMatrix = Eigen::MatrixXi{ n, n };
+    markovMatrix.setIdentity();
+    size_t anz = 0;
+    std::vector<DiceThrow>& wilds = combo_store_[0];
+    for (const auto& dice : possible_combs_)
+    {
+        size_t matrix_idx_i = all_combs[number_dice_-1].dicehash_to_combs_sorted[get_hash(dice)];
+        //size_t sorted_hash_i = all_combs[number_dice_ - 1].dicehash_to_combs_sorted[matrix_idx_i];
+
+        if (card.function_to_call == 0)
+        {
+            anz = sixit_anz_;
+            get_sixits(dice, wilds, 0);
+        }
+        if (card.function_to_call == 1)
+        {
+            anz = samesis_anz_;
+            get_samessis(dice, wilds, 0);
+        }
+        if (card.function_to_call == 2)
+        {
+            anz = samesis2_anz_;
+            get_samessis2(dice, wilds, 0);
+        }
+        if (card.function_to_call == 3)
+        {
+            anz = tipit_anz_;// anz = 8;
+            get_tipits(dice, wilds, 0);
+        }
+        if (card.function_to_call == 4)
+        {
+            anz = tipit2_anz_;
+            get_tipits2(dice, wilds, 0);
+        }
+        if (card.function_to_call == 5)
+        {
+            anz = wilds_anz_;
+            get_wilds(dice, wilds, 0);
+        }
+        if (card.function_to_call == 6)
+        {
+            anz = twiceaswild_anz_;
+            get_wilds2(dice, wilds, 0);
+        }
+        if (card.function_to_call == 7)
+        {
+            anz = slightlywild_anz_;
+            get_slightlywilds(dice, wilds, 0);
+        }
+        if (card.function_to_call == 8)
+        {
+            anz = tipit_anz_;
+            get_probabilitymanipulations(dice, wilds, 0);
+        }
+        for (size_t i = 0; i < anz; i++)
+        {
+            if (!wilds[i].success)
+            {
+                continue;
+            }
+            size_t matrix_idx_j = all_combs[number_dice_ - 1].dicehash_to_combs_sorted[get_hash(wilds[i])]; //because result dice are not sorted!
+
+            markovMatrix(matrix_idx_i, matrix_idx_j) = 1;
+        }
+    }
+}
 
 bool Simulator::hit_target_ability(const std::vector<DiceIdx>& target, DiceThrow& dice, const std::vector<DiceIdx>& mydiceanatomy)
 {
@@ -5455,6 +6919,280 @@ void Simulator::get_all_positive_combs_storage_upper_lower_bound(const std::vect
     std::cout << "skipped with lower: " << skipps2 << " skipped lower 2: " << skipps3 << " skipps test " << skipps << std::endl;
 #endif
     //std::cout << "skipped with lower: " << skipps2 << " skipped upper : " << skipps3<< " skipps same "<< skipps4 <<" skipps test "<< skipps << std::endl;
+    //std::cout << "hits cards: " << positive_count << "/" << possible_combs_.size() << std::endl;
+    possible_list_with_cheat_dt_succ_only.clear();
+    for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
+    {
+        const DiceThrow& dt = possible_list_with_cheat_dt[i];
+        if (!dt.success)
+        {
+            continue;
+        }
+        if (dt.manipula[0].card != 0)
+        {
+            //manipulated are allways added
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            continue;
+        }
+        bool added = false;
+        if (straight && !is_big)
+        {
+            if (!is_big_straight(dt))
+            {
+                possible_list_with_cheat_dt_succ_only.push_back(dt);
+                added = true;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            added = true;
+        }
+        if (added && sixit && cp >= sixit_cp && use_max_cards >= 1 && possible_list_with_cheat_dt_succ_only.back().dice[number_dice_ - 1] == 5)
+        {
+            possible_list_with_cheat_dt_succ_only.back().rerollers[number_dice_ - 1] = true;
+        }
+    }
+
+    // generate reroll list for unsuccesfull throws :
+    for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
+    {
+        DiceThrow& dt = possible_list_with_cheat_dt[i];
+        if (dt.success)
+        {
+            continue;
+        }
+        //std::cout << "no success " << dt.get_string() << std::endl;
+        update_rerollers(dt);
+    }
+    //possible_list_with_cheat_dt_save_last = possible_list_with_cheat_dt;
+}
+
+void Simulator::get_all_positive_combs_storage_lower_bound_clever(const std::vector<DiceIdx>& mydiceanatomy, const std::vector<DiceIdx>& target, const std::vector<Card>& cards, size_t cp, size_t use_max_cards)
+{
+
+    bool tip_it = false;
+    bool sixit = false;
+    size_t sixit_idx = 0;
+    size_t sixit_cp = 1;
+    for (size_t i = 0; i < cards.size(); i++)
+    {
+        const auto& c = cards[i];
+        if (c.card_id == 0)
+        {
+            sixit = true;
+            sixit_idx = i;
+            sixit_cp = c.cp_cost;
+        }
+        if (c.card_id == 2)
+        {
+            tip_it = true;
+        }
+    }
+
+    int pos_count = 0;
+    std::vector<DiceThrow> combs;
+
+    bool need_sixit = false;
+    //perform sixit test, only if a 6 or a 5 with tip it! is needed
+    if (sixit && target[mydiceanatomy[5]] > 0)
+    {
+        need_sixit = true;
+    }
+    if (tip_it && sixit)
+    {
+        if (target[mydiceanatomy[4]] > 0)
+        {
+            need_sixit = true;
+        }
+    }
+    size_t count_no_cheat = 0;
+    bool straight = false;
+    bool is_big = false;
+
+    if (possible_calced_ == false)
+    {
+        possible_calced_ = true;
+        if (target[0] >= 7)
+        {
+            straight = true;
+            need_sixit = sixit;
+            //Small or big straight!
+            is_big = target[0] == 8;
+            for (size_t j = 0; j < possible_combs_.size(); j++)
+            {
+                DiceThrow& dt = possible_combs_[j];
+                dt.success = false;
+                if (is_straight(dt, is_big))
+                {
+                    dt.success = true;
+                    count_no_cheat++;
+                }
+            }
+        }
+        else
+        {
+            //check all legal combos without helper-cards
+
+            for (size_t j = 0; j < possible_combs_.size(); j++)
+            {
+                DiceThrow& dt = possible_combs_[j];
+                dt.success = false;
+                if (hit_target_ability(target, dt, mydiceanatomy))
+                {
+                    dt.success = true;
+                    count_no_cheat++;
+                }
+            }
+        }
+        //std::cout << "hits no cards: " << count_no_cheat << "/" << possible_combs_.size() << std::endl;
+        //blow up list for cardhelpers to speed next step up:
+        //generate all combinations (so we dont have to sort dice-throws)
+        possible_combs_blow_up_.clear();
+        possible_combs_blow_up_to_sorted_idx.clear();
+        possible_combs_blow_up_.resize(possible_combs_blow_up_size_);
+        possible_combs_blow_up_to_sorted_idx.resize(possible_combs_blow_up_size_);
+        for (size_t i = 0; i < possible_combs_.size(); i++)
+        {
+            const DiceThrow& dt = possible_combs_[i];
+
+            std::vector<DiceThrowDice> v = dt.getvec();
+            DiceHash org_idx = get_hash(v);
+            do
+            {
+                size_t idx = get_hash(v);
+                possible_combs_blow_up_[idx] = dt;
+                for (size_t i = 0; i < number_dice_; i++)
+                {
+                    possible_combs_blow_up_[idx].rerollers[i] = v[i].reroll;
+                    possible_combs_blow_up_[idx].dice[i] = v[i].die;
+                    possible_combs_blow_up_to_sorted_idx[idx] = org_idx;
+
+                }
+            } while (std::next_permutation(v.begin(), v.end(),
+                [](const auto& lhs, const auto& rhs)
+                { return lhs.die < rhs.die; }));
+        }
+    }
+
+    std::size_t skipps = 0;
+    std::size_t skipps2 = 0;
+    std::size_t skipps3 = 0;
+    //create list for all successfully combinations (with card-helpers)
+    if (possible_list_with_cheat_dt.empty())
+    {
+        possible_list_with_cheat_dt = possible_combs_;
+    }
+    int positive_count = 0;
+    // we calculated positive stuff with every card and cp in possible_list_with_cheat_dt_save
+    //current run have more restrictions -> only test the ones that where true in possible_list_with_cheat_dt_save if they are still true
+    for (size_t i = 0; i < possible_combs_.size(); i++)
+    {
+        const DiceThrow& dt = possible_combs_[i];
+        if (possible_list_with_cheat_dt_save_last != nullptr && !possible_list_with_cheat_dt_save_last->empty())
+        {
+            //last one is with more restriction-> is it possible, this run is also possible
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_last)[i];
+            if (lastdt.success)
+            {
+                skipps2++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        if (possible_list_with_cheat_dt_save_last2 != nullptr && !possible_list_with_cheat_dt_save_last2->empty())
+        {
+            //last one is with more restriction-> is it possible, this run is also possible
+            const DiceThrow& lastdt = (*possible_list_with_cheat_dt_save_last2)[i];
+            if (lastdt.success)
+            {
+                skipps2++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                continue;
+            }
+        }
+        bool found_in_db = false;
+        for (const auto& poss_list : save_db_big_)
+        {
+            const DiceThrow& lastdt = poss_list[i];
+            if (lastdt.success)
+            {
+                skipps3++;
+                possible_list_with_cheat_dt[i] = lastdt;
+                found_in_db = true;
+                continue;
+            }
+        }
+        if (found_in_db)
+        {
+            continue;
+        }
+
+        //fast test
+        if (!straight && !dt.success && !fast_test(target, dt, mydiceanatomy, cards, cp, use_max_cards))
+        {
+            skipps++;
+            possible_list_with_cheat_dt[i] = dt;
+            continue;
+        }
+        if (!dt.success)
+        {
+            //throw was manipulated in complete list -> only test this one, if it is still successfull
+            DiceThrow dtc = dt;
+            for (size_t ii = 0; ii < number_dice_; ii++)
+            {
+                dtc.reroll_manipulation[ii] = 0;
+            }
+
+            card_store_[0] = cards;
+            if (cards.size() > 0 && !need_sixit && sixit)
+            {
+                card_store_[0][sixit_idx].can_use = false;
+            }
+            int val = test_all_combis(dtc, cp, use_max_cards, 0);
+            if (val >= 0)
+            {
+                //dt.success = true;
+                possible_list_with_cheat_dt[i].success = true;
+                //get real rerollers!
+                //sort rerollers
+                for (size_t ii = 0; ii < number_dice_ - 1; ii++)
+                {
+                    if (dt.dice[ii] == dt.dice[ii + 1] && this->target_reroller_start.reroll_manipulation[ii] == 1 && this->target_reroller_start.reroll_manipulation[ii + 1] == 0)
+                    {
+                        std::swap(this->target_reroller_start.reroll_manipulation[ii], this->target_reroller_start.reroll_manipulation[ii + 1]);
+                        std::swap(this->target_reroll_dice.rerollers[ii], this->target_reroll_dice.rerollers[ii + 1]);
+                    }
+                }
+
+                for (size_t ii = 0; ii < number_dice_; ii++)
+                {
+                    possible_list_with_cheat_dt[i].rerollers[ii] = this->target_reroll_dice.rerollers[ii];
+                    if (target_reroller_start.reroll_manipulation[ii] >= 1)
+                    {
+                        possible_list_with_cheat_dt[i].rerollers[ii] = true;
+                    }
+                }
+                possible_list_with_cheat_dt[i].manipula = this->target_reroller_start.manipula;
+                possible_list_with_cheat_dt[i].reroll_manipulation = this->target_reroller_start.reroll_manipulation;
+                positive_count++;
+
+            }
+            else
+            {
+                possible_list_with_cheat_dt[i].success = false;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt[i] = dt;
+        }
+    }
+
+#ifdef __linux__
+    std::cout << "skipped with lower: " << skipps2 << " skipped lower 2: " << skipps3 << " skipps test " << skipps << std::endl;
+#endif
+    //std::cout << "skipped with lower: " << skipps2 << " skipped lower 2: " << skipps3<< " skipps test "<< skipps << std::endl;
     //std::cout << "hits cards: " << positive_count << "/" << possible_combs_.size() << std::endl;
     possible_list_with_cheat_dt_succ_only.clear();
     for (size_t i = 0; i < possible_list_with_cheat_dt.size(); i++)
