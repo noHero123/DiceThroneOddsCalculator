@@ -4044,12 +4044,37 @@ void Simulator::save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::
     std::stringstream ss;
     ss << Helpers::get_cards_string(cards) << " " << mdata.cp_used << " " << mdata.cards_used;
     std::string key = ss.str();
+    std::string data1 = "";
+    size_t mat_size = possible_combs_.size();
+    size_t stringsize = ((2 * mat_size) * (mat_size));
+    data1.resize(stringsize);
+    
+    size_t idx = 0;
+    for (size_t i = 0; i < mat_size; i++)
+    {
 
-    std::stringstream sss;
-    sss << matrix;
-    std::string data = sss.str();
+        for (size_t j = 0; j < mat_size; j++)
+        {
+            if (matrix(i, j) == 0)
+            {
+                data1[idx] = '0';
+            }
+            else
+            {
+                data1[idx] = '1';
+            }
+            idx++;
+            data1[idx] = ' ';
+            idx++;
+        }
+        data1[idx - 1] = '\n';
+    }
+    data1.pop_back();
+    //std::stringstream sss;
+    //sss << matrix;
+    //std::string data = sss.str();
     bool sim4 = number_dice_ == 4;
-    helper.sqlite_write_matrix_data(key, data, isDTA, sim4, thread);
+    helper.sqlite_write_matrix_data(key, data1, isDTA, sim4, thread);
     //helper.sqlite_write_matrix_data_fast(key, data, isDTA, sim4, thread);
 }
 
