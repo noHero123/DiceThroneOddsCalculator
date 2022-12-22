@@ -622,13 +622,56 @@ void commandLineCalculation(const InputParser & parser)
     }
 }
 
+void precalc_matrix(size_t thread, size_t max_thread)
+{
+    DiceRoller dr{ 10 };
+    bool calc_sim = true;
+    bool calc_dta = true;
+
+    bool calc_sim4 = false;
+    if (calc_sim)
+    {
+        Simulator sim(dr);
+        std::cout << "start thread " << thread << "##################################" << std::endl;
+        sim.precalc_matrix_ability(calc_dta, thread, max_thread);
+        std::cout << "thread " << thread << " ended ##################################" << std::endl;
+    }
+    if (calc_sim4)
+    {
+        Simulator4 sim4(dr);
+        std::cout << "start thread " << thread << "##################################" << std::endl;
+        std::cout << "TODO" << std::endl;
+        //sim4.precalc_matrix_ability(calc_dta, thread, max_thread);
+        std::cout << "thread " << thread << " ended ##################################" << std::endl;
+    }
+}
+
+void do_precalcs_matrix()
+{
+    size_t max_workers = std::thread::hardware_concurrency();
+    if (max_workers == 0)
+    {
+        max_workers = 1;
+    }
+    if (max_workers >= 4)
+    {
+        max_workers -= 2;
+    }
+    std::vector<std::future<void>> handles;
+    std::chrono::milliseconds span(1000);
+    for (size_t thread = 0; thread < max_workers; thread++)
+    {
+        handles.push_back(std::async(std::launch::async, precalc_matrix, thread, max_workers));
+    }
+}
+
 void do_precalc_test()
 {
     std::string anatomy = "AABCCD";
     std::string ability = "AAAAA";
     DiceRoller dr{ 10 };
     bool calc_sim = true;
-    bool calc_dta = false;
+    bool calc_dta = true;
     bool calc_sim4 = false;
     if (calc_sim)
     {
@@ -648,7 +691,7 @@ void do_precalc_test()
 int main(int argc, char* argv[])
 {
     // TEST ####
-    do_precalc_test();
+    do_precalcs_matrix();
     return 0;
     // TEST ####
 

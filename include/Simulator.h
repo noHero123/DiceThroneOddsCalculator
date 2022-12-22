@@ -147,8 +147,11 @@ public:
 	void createCardMatrix(const Card& card, Eigen::MatrixXi& markovMatrix);
 	void print_matrix_entry(size_t row, const std::string& name, const Eigen::MatrixXi& matrix);
 	void precalc_ability_matrix_test(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
-	void precalc_ability_matrix_part(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
-	void save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA);
+	
+	void save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA, size_t thread);
+	bool has_matrix_data(const std::vector<DiceIdx>& combi, bool isDTA, bool sim4, size_t thread);
+	void precalc_matrix_ability(bool calc_dta, size_t thread, size_t max_threads);
+	void precalc_ability_matrix_part(bool isDTA, size_t thread, size_t max_threads);
 
 
 	//default one

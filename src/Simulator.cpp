@@ -3013,11 +3013,15 @@ void Simulator::precalc_ability(std::string ability, std::string diceanatomy, bo
     {
         ability_name = ability + "-" + diceanatomy;
     }
-    //precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
-    precalc_ability_matrix_part(ability_name, target_ability, mydiceanatomy, calc_dta);
+    precalc_ability(ability_name, target_ability, mydiceanatomy, calc_dta);
+    //precalc_ability_matrix_part(ability_name, target_ability, mydiceanatomy, calc_dta);
     //precalc_ability_matrix_test(ability_name, target_ability, mydiceanatomy, calc_dta);
-    //precalc_ability_clever(ability_name, target_ability, mydiceanatomy, calc_dta);
-    //precalc_ability_fast(ability_name, target_ability, mydiceanatomy, calc_dta); //not so fast as thought
+    return;
+}
+
+void Simulator::precalc_matrix_ability(bool calc_dta, size_t thread, size_t max_threads)
+{
+    precalc_ability_matrix_part(calc_dta, thread, max_threads);
     return;
 }
 
@@ -3744,7 +3748,7 @@ void Simulator::calculateMatrices(const CardMatrixData& mdata, std::vector<CardM
     tempmat.setIdentity();
 
     //DEBUGGING:##
-    std::vector<DiceIdx> target_cards_combi = { 0,0,0,0,2,0,0,2 };
+    /*std::vector<DiceIdx> target_cards_combi = {0,0,0,0,2,0,0,2};
     bool debug_found = true;
     size_t debug_cp = 2;
     size_t debug_cards = 1;
@@ -3758,7 +3762,7 @@ void Simulator::calculateMatrices(const CardMatrixData& mdata, std::vector<CardM
     if (debug_found)
     {
         std::cout << "start debugging..." << std::endl;
-    }
+    }*/
     //############
 
     size_t matrice_data_size_start = matrices_data.size();
@@ -3773,10 +3777,10 @@ void Simulator::calculateMatrices(const CardMatrixData& mdata, std::vector<CardM
             {
                 continue;
             }
-            if (debug_found && anzcp == debug_cp && anzcards == debug_cards)
+            /*if (debug_found && anzcp == debug_cp && anzcards == debug_cards)
             {
                 std::cout << "start debug" << std::endl;
-            }
+            }*/
             CardMatrixData temp_data = mdata;
             temp_data.cards_used = anzcards;
             temp_data.cp_used = anzcp;
@@ -4026,7 +4030,7 @@ std::vector<DiceThrow> Simulator::getPossibleListFromMatrix(size_t anzcp, size_t
 
 }
 
-void Simulator::save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA)
+void Simulator::save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA, size_t thread)
 {
     std::vector<Card> cards = Helpers::getCards(
         mdata.cards_combi[7],
@@ -4045,8 +4049,44 @@ void Simulator::save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::
     sss << matrix;
     std::string data = sss.str();
     bool sim4 = number_dice_ == 4;
-    helper.sqlite_write_matrix_data(key, data, isDTA, sim4);
+    helper.sqlite_write_matrix_data(key, data, isDTA, sim4, thread);
+    //helper.sqlite_write_matrix_data_fast(key, data, isDTA, sim4, thread);
 }
+
+bool Simulator::has_matrix_data(const std::vector<DiceIdx>& combi, bool isDTA, bool sim4, size_t thread)
+{
+    std::vector<Card> cards = Helpers::getCards(
+        combi[7],
+        combi[1],
+        combi[2],
+        combi[3],
+        combi[4],
+        combi[0],
+        combi[5],
+        combi[6]);
+
+    size_t cp = 0;
+    size_t anzcards = 0;
+    for (const auto& c : cards)
+    {
+        cp += c.cp_cost;
+        if (c.card_id <= 5)
+        {
+            anzcards++;
+        }
+    }
+
+    std::stringstream ss;
+    ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
+    std::string key = ss.str();
+    std::string result = helper.sqlite_get_matrix_data(key, isDTA, sim4, thread);
+    if (result == "")
+    {
+        return false;
+    }
+    return true;
+}
+
 
 std::vector<std::vector<DiceIdx>> get_all_sub_combs(std::vector<DiceIdx> data, bool isDTA)
 {
@@ -4107,11 +4147,10 @@ std::vector<std::vector<DiceIdx>> get_all_sub_combs(std::vector<DiceIdx> data, b
     return result;
 }
 
-void Simulator::precalc_ability_matrix_part(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA)
+void Simulator::precalc_ability_matrix_part(bool isDTA, size_t thread, size_t max_threads)
 {
-    generator_anatomy = mydiceanatomy;
-    generator_target = target_ability;
     //calculate every card-combination
+    bool save_and_delete_old_ones = true;
     std::vector<DiceIdx> stack;
     size_t sampleCount = 8U;
     std::vector<DiceIdx> options = { 0, 1, 2, 3, 4 };// maximum levels , 0 = no card
@@ -4125,8 +4164,6 @@ void Simulator::precalc_ability_matrix_part(std::string ability_name, const std:
     sort_combis(erg);
 
     std::vector<std::vector<DiceIdx>> erg2{};
-   
-
     
     for (const std::vector<DiceIdx>& combi : erg)
     {
@@ -4188,23 +4225,75 @@ void Simulator::precalc_ability_matrix_part(std::string ability_name, const std:
     auto start_time = std::chrono::high_resolution_clock::now();
     auto print_time = ((start_time - start_time) / std::chrono::milliseconds(1)) / 1000.0;
     auto start_time123 = std::chrono::high_resolution_clock::now();
-
+    size_t erg_counter = 0;
+    size_t max_counter = erg3.size();
+    size_t max_cards_to_calculate = isDTA ? 9 : 8;
     for (const auto& maxerg : erg3)
     {
+        if (erg_counter % max_threads != thread)
+        {
+            erg_counter++;
+            continue;
+        }
+        erg_counter++;
+        bool sim4 = number_dice_ == 4;
+        if (has_matrix_data(maxerg, isDTA, sim4, thread))
+        {
+            continue;
+        }
+
         erg.clear();
         erg = get_all_sub_combs(maxerg, isDTA);
 
-        std::vector<Card> card_matrices;
-        std::vector<Eigen::MatrixXi> matrices;
-        std::vector<Eigen::MatrixXi> basic_matrices;
+        //combo card matrices needed only last step
         std::vector<CardMatrixData> matrices_data;
-
+        std::vector<Eigen::MatrixXi> matrices;
+        //single card matrices needed the whole calculation
+        std::vector<Card> card_matrices;
+        std::vector<Eigen::MatrixXi> basic_matrices;
+        
+        size_t old_count = 0;
         for (const std::vector<DiceIdx>& combi : erg)
         {
-
+            
             std::vector<Card> cards = Helpers::getCards(combi[7], combi[1], combi[2], combi[3], combi[4], combi[0], combi[5], combi[6]);
 
             size_t count_erg = cards.size(); // cards.size is correct here!
+
+            if (old_count != count_erg)
+            {
+                old_count = count_erg;
+                if (count_erg >= 3)
+                {
+                    size_t count_to_delete = count_erg - 2;
+                    size_t index_to_delete = matrices_data.size()+1;
+                    std::cout << "thread " << thread << " saving matrices" << std::endl;
+                    for (size_t i = 0; i < matrices_data.size(); i++)
+                    {
+                        if (matrices_data[i].number_cards <= count_to_delete)
+                        {
+                            //save matrice
+                            
+                            save_matrix_to_sqlite(matrices_data[i], matrices[i], isDTA, thread);
+                        }
+
+                        if (matrices_data[i].number_cards > count_to_delete)
+                        {
+                            if (i >= 1)
+                            {
+                                index_to_delete = i;
+                            }
+                            break;
+                        }
+                    }
+                    std::cout << "thread " << thread << " saving matrices end" << std::endl;
+                    if (index_to_delete < matrices_data.size() + 1)
+                    {
+                        matrices_data.erase(matrices_data.begin(), matrices_data.begin() + index_to_delete);
+                        matrices.erase(matrices.begin(), matrices.begin() + index_to_delete);
+                    }
+                }
+            }
 
             if (count_erg == 1)
             {
@@ -4250,17 +4339,25 @@ void Simulator::precalc_ability_matrix_part(std::string ability_name, const std:
                 auto time123 = end_time123 - start_time123;
                 auto tmili123 = (time123 / std::chrono::milliseconds(1)) / 1000.0;
                 double tmin123 = tmili123 / 60.0;
-                std::cout << "permuts: " << count_erg << " all mat calcs done in " << tmin123 << " min" << std::endl;
+                std::cout <<"thread " << thread  <<" permutation " << (erg_counter) << " / " << max_counter << " cards: " << count_erg << " / " << max_cards_to_calculate << " all calcs done in " << tmin123 << " min" << std::endl;
             }
         }
 
         // save matrixes to SQLITE
         auto save_time = std::chrono::high_resolution_clock::now();
         std::cout << "saving matrices" << std::endl;
+        
         for (size_t i = 0; i < matrices_data.size(); i++)
         {
-            save_matrix_to_sqlite(matrices_data[i], matrices[i], isDTA);
+            save_matrix_to_sqlite(matrices_data[i], matrices[i], isDTA, thread);
+            /*if (i % 50 == 49)
+            {
+                helper.write_to_db(isDTA, sim4);
+            }*/
         }
+        //helper.write_to_db(isDTA, sim4);
+        //only use if memory db is used
+        //helper.sqlite_write_memory_matrix(isDTA, false);
         auto save_time2 = std::chrono::high_resolution_clock::now();
         auto save123 = save_time2 - save_time;
         auto tmilisave = (save123 / std::chrono::milliseconds(1)) / 1000.0;

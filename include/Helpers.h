@@ -88,11 +88,62 @@ public:
         return txt1;
     }
 
-    void sqlite_write_matrix_data(std::string key, std::string uncompressed_data, bool isDTA, bool sim4 = false)
+    void sqlite_write_matrix_data(std::string key, std::string uncompressed_data, bool isDTA, bool sim4, size_t thread)
     {
-        std::string dbname = "Matrix.db";
-        if (sim4) dbname = "Matrix4.db";
-        if (isDTA) dbname = "MatrixDTA.db";
+        std::string table_name = "DTMatrix";
+        std::string dbname = "Matrix_t" +std::to_string(thread) +".db";
+        if (sim4) dbname = "Matrix4_t" + std::to_string(thread) + ".db";
+        if (isDTA) dbname = "MatrixDTA_t" + std::to_string(thread) + ".db";
+        int rc;                   /* Function return code */
+
+        if (dbname != last_matrixdb_path || matrixdb == nullptr)
+        {
+            closeMatrixDB();
+            rc = sqlite3_open(dbname.c_str(), &matrixdb);
+            if (rc != SQLITE_OK)
+            {
+                std::cout << "database " << dbname << "is missing" << std::endl;
+                return;
+            }
+            last_matrixdb_path = dbname;
+            //create matrix table:
+            
+
+            std::string createQuery = "CREATE TABLE IF NOT EXISTS " + table_name + " (key TEXT PRIMARY KEY, data TEXT);";
+            std::cout << createQuery << std::endl;
+            sqlite3_stmt* createStmt;
+            std::cout << "Creating Table Statement" << std::endl;
+            sqlite3_prepare(matrixdb, createQuery.c_str(), (int)createQuery.size(), &createStmt, NULL);
+            std::cout << "Stepping Table Statement" << std::endl;
+            if (sqlite3_step(createStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Create Table!" << std::endl;
+                return;
+            }
+            sqlite3_finalize(createStmt);
+        }
+
+        std::string insertQuery = "";
+        std::string data = Zipper::string_compress_encode(uncompressed_data);
+        insertQuery = "INSERT INTO \'" + table_name + "\' SELECT \'" + key + "\' AS key, \'" + data + "\' AS data;";
+        sqlite3_stmt* insertStmt;
+        if (sqlite3_prepare_v2(matrixdb, insertQuery.c_str(), -1, &insertStmt, NULL) == SQLITE_OK)
+        {
+            if (sqlite3_step(insertStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Insert Item!" << std::endl;
+            }
+        }
+        else
+        {
+            printf("%s: %s\n", sqlite3_errstr(sqlite3_extended_errcode(matrixdb)), sqlite3_errmsg(matrixdb));
+        }
+        sqlite3_finalize(insertStmt);
+    }
+
+    void sqlite_write_matrix_data_fast(std::string key, std::string uncompressed_data, bool isDTA, bool sim4 = false)
+    {
+        std::string dbname = ":memory:";
         int rc;                   /* Function return code */
 
         if (dbname != last_matrixdb_path || matrixdb == nullptr)
@@ -139,6 +190,179 @@ public:
             printf("%s: %s\n", sqlite3_errstr(sqlite3_extended_errcode(matrixdb)), sqlite3_errmsg(matrixdb));
         }
         sqlite3_finalize(insertStmt);
+    }
+
+    void add_to_save_string(std::string key, std::string uncompressed_data)
+    {
+        if (matrix_db_save_string == "")
+        {
+            std::string table_name = "DTMatrix";
+            std::string data = Zipper::string_compress_encode(uncompressed_data);
+            std::string createQuery = "INSERT INTO \'" + table_name + "\' SELECT \'" + key + "\' AS key, \'" + data + "\' AS data";
+            matrix_db_save_string += createQuery;
+        }
+        else
+        {
+            std::string data = Zipper::string_compress_encode(uncompressed_data);
+            std::string additional_data = " UNION ALL SELECT \'" + key + "\',\'" + data + "\'";
+            matrix_db_save_string += additional_data;
+        }
+        
+    }
+    
+    void write_to_db(bool isDTA, bool sim4 = false)
+    {
+        if (matrix_db_save_string == "")
+        {
+            return;
+        }
+        std::string dbname = "Matrix.db";
+        if (sim4) dbname = "Matrix4.db";
+        if (isDTA) dbname = "MatrixDTA.db";
+        int rc;                   /* Function return code */
+
+        if (dbname != last_matrixdb_path || matrixdb == nullptr)
+        {
+            closeMatrixDB();
+            rc = sqlite3_open(dbname.c_str(), &matrixdb);
+            if (rc != SQLITE_OK)
+            {
+                std::cout << "database " << dbname << "is missing" << std::endl;
+                return;
+            }
+            last_matrixdb_path = dbname;
+            //create matrix table:
+            std::string table_name = "DTMatrix";
+
+            std::string createQuery = "CREATE TABLE IF NOT EXISTS " + table_name + " (key TEXT PRIMARY KEY, data TEXT);";
+            std::cout << createQuery << std::endl;
+            sqlite3_stmt* createStmt;
+            std::cout << "Creating Table Statement" << std::endl;
+            sqlite3_prepare(matrixdb, createQuery.c_str(), (int)createQuery.size(), &createStmt, NULL);
+            std::cout << "Stepping Table Statement" << std::endl;
+            if (sqlite3_step(createStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Create Table!" << std::endl;
+                return;
+            }
+            sqlite3_finalize(createStmt);
+        }
+
+        std::string table_name = "DTMatrix";
+        std::string insertQuery = "";
+        insertQuery = matrix_db_save_string+ "; ";
+        sqlite3_stmt* insertStmt;
+        if (sqlite3_prepare_v2(matrixdb, insertQuery.c_str(), -1, &insertStmt, NULL) == SQLITE_OK)
+        {
+            if (sqlite3_step(insertStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Insert Item!" << std::endl;
+            }
+        }
+        else
+        {
+            printf("%s: %s\n", sqlite3_errstr(sqlite3_extended_errcode(matrixdb)), sqlite3_errmsg(matrixdb));
+        }
+        sqlite3_finalize(insertStmt);
+        matrix_db_save_string = "";
+    }
+
+    void sqlite_write_memory_matrix(bool isDTA, bool sim4 = false)
+    {
+        loadOrSaveDb(matrixdb, isDTA, sim4);
+    }
+
+    int loadOrSaveDb(sqlite3* pInMemory,  bool isDTA, bool sim4 = false)
+    {
+        int isSave = 1;
+        std::string dbname = "Matrix.db";
+        if (sim4) dbname = "Matrix4.db";
+        if (isDTA) dbname = "MatrixDTA.db";
+        const char* zFilename = dbname.c_str();
+        int rc;                   /* Function return code */
+        sqlite3* pFile;           /* Database connection opened on zFilename */
+        sqlite3_backup* pBackup;  /* Backup object used to copy data */
+        sqlite3* pTo;             /* Database to copy to (pFile or pInMemory) */
+        sqlite3* pFrom;           /* Database to copy from (pFile or pInMemory) */
+
+        rc = sqlite3_open(zFilename, &pFile);
+        if (rc == SQLITE_OK)
+        {
+
+            pFrom = (isSave ? pInMemory : pFile);
+            pTo = (isSave ? pFile : pInMemory);
+
+            pBackup = sqlite3_backup_init(pTo, "main", pFrom, "main");
+            if (pBackup) {
+                (void)sqlite3_backup_step(pBackup, -1);
+                (void)sqlite3_backup_finish(pBackup);
+            }
+            rc = sqlite3_errcode(pTo);
+        }
+
+        (void)sqlite3_close(pFile);
+        return rc;
+    }
+
+    std::string sqlite_get_matrix_data(std::string search, bool isDTA, bool sim4, size_t thread)
+    {
+        int rc;                   /* Function return code */
+        std::string table_name = "DTMatrix";
+        std::string dbname = "Matrix_t" + std::to_string(thread) + ".db";
+        if (sim4) dbname = "Matrix4_t" + std::to_string(thread) + ".db";
+        if (isDTA) dbname = "MatrixDTA_t" + std::to_string(thread) + ".db";
+
+        if (dbname != last_matrixdb_path || matrixdb == nullptr)
+        {
+            closeMatrixDB();
+            rc = sqlite3_open(dbname.c_str(), &matrixdb);
+            if (rc != SQLITE_OK)
+            {
+                std::cout << "database " << dbname << "is missing" << std::endl;
+                return "";
+            }
+            last_matrixdb_path = dbname;
+            //create matrix table:
+
+
+            std::string createQuery = "CREATE TABLE IF NOT EXISTS " + table_name + " (key TEXT PRIMARY KEY, data TEXT);";
+            std::cout << createQuery << std::endl;
+            sqlite3_stmt* createStmt;
+            std::cout << "Creating Table Statement" << std::endl;
+            sqlite3_prepare(matrixdb, createQuery.c_str(), (int)createQuery.size(), &createStmt, NULL);
+            std::cout << "Stepping Table Statement" << std::endl;
+            if (sqlite3_step(createStmt) != SQLITE_DONE)
+            {
+                std::cout << "Didn't Create Table!" << std::endl;
+                return "";
+            }
+            sqlite3_finalize(createStmt);
+        }
+
+
+        std::string selectQuery = "SELECT * FROM " + table_name + " WHERE key == \'" + search + "\';";
+        sqlite3_stmt* selectStmt;
+        sqlite3_prepare(matrixdb, selectQuery.c_str(), (int)selectQuery.size(), &selectStmt, NULL);
+        int ret_code = 0;
+        if ((ret_code = sqlite3_step(selectStmt)) != SQLITE_ROW)
+        {
+            std::cout << "cant find " << table_name << std::endl;
+            return "";
+        }
+        const unsigned char* txt_ptr = sqlite3_column_text(selectStmt, 1);
+        if (txt_ptr == nullptr)
+        {
+            std::cout << "error data null" << std::endl;
+            return "";
+        }
+        std::string txt = std::string(reinterpret_cast<const char*>(txt_ptr));
+        sqlite3_finalize(selectStmt);
+        std::string txt1 = txt;
+        if (txt != "")
+        {
+            txt1 = Zipper::string_decompress_decode(txt);
+        }
+        return txt1;
     }
 
     static size_t get_number_lines(const std::string& name)
@@ -706,5 +930,7 @@ public:
 
     sqlite3* matrixdb = nullptr;
     std::string last_matrixdb_path = "";
+
+    std::string matrix_db_save_string = "";
 
 };
