@@ -671,7 +671,7 @@ void do_precalc_test()
     std::string ability = "AAAAA";
     DiceRoller dr{ 10 };
     bool calc_sim = true;
-    bool calc_dta = true;
+    bool calc_dta = false;
     bool calc_sim4 = false;
     if (calc_sim)
     {
@@ -691,8 +691,8 @@ void do_precalc_test()
 int main(int argc, char* argv[])
 {
     // TEST ####
-    do_precalcs_matrix();
-    return 0;
+    //do_precalcs_matrix();
+    //return 0;
     // TEST ####
 
     if (argc > 1)
@@ -701,12 +701,16 @@ int main(int argc, char* argv[])
         commandLineCalculation(parser);
         return 0;
     }
-    bool docalcs = true;
+
+    bool docalcs = false;
     bool do_tests = false;
     if (docalcs)
     {
-        precalc_all(false, "");
-        writeTxtToDB();
+        do_precalcs_matrix();
+        
+        // DEPRECATED:
+        //precalc_all(false, "");
+        //writeTxtToDB();
 
         // TESTING ##### 
         //std::filesystem::create_directories("./precalcs4/");

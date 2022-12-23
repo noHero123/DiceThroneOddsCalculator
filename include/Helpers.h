@@ -304,13 +304,27 @@ public:
         return rc;
     }
 
-    std::string sqlite_get_matrix_data(std::string search, bool isDTA, bool sim4, size_t thread)
+    std::string sqlite_get_matrix_data(std::string search, bool isDTA, bool sim4)
     {
-        int rc;                   /* Function return code */
-        std::string table_name = "DTMatrix";
+        std::string dbname = "Matrix.db";
+        if (sim4) dbname = "Matrix4.db";
+        if (isDTA) dbname = "MatrixDTA.db";
+        return sqlite_get_matrix_data_thread(dbname, search);
+    }
+
+    std::string sqlite_get_matrix_data_thread(std::string search, bool isDTA, bool sim4, size_t thread)
+    {
         std::string dbname = "Matrix_t" + std::to_string(thread) + ".db";
         if (sim4) dbname = "Matrix4_t" + std::to_string(thread) + ".db";
         if (isDTA) dbname = "MatrixDTA_t" + std::to_string(thread) + ".db";
+
+        return sqlite_get_matrix_data_thread(dbname, search);
+    }
+
+    std::string sqlite_get_matrix_data_thread(std::string dbname, std::string search)
+    {
+        int rc;                   /* Function return code */
+        std::string table_name = "DTMatrix";
 
         if (dbname != last_matrixdb_path || matrixdb == nullptr)
         {

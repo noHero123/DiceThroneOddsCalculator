@@ -4104,14 +4104,13 @@ bool Simulator::has_matrix_data(const std::vector<DiceIdx>& combi, bool isDTA, b
     std::stringstream ss;
     ss << Helpers::get_cards_string(cards) << " " << cp << " " << anzcards;
     std::string key = ss.str();
-    std::string result = helper.sqlite_get_matrix_data(key, isDTA, sim4, thread);
+    std::string result = helper.sqlite_get_matrix_data_thread(key, isDTA, sim4, thread);
     if (result == "")
     {
         return false;
     }
     return true;
 }
-
 
 std::vector<std::vector<DiceIdx>> get_all_sub_combs(std::vector<DiceIdx> data, bool isDTA)
 {
@@ -5274,6 +5273,257 @@ bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, 
 
     return true;
 }
+
+void Simulator::load_combs_from_matrix(std::string ability_name, std::string diceanatomy, const Eigen::MatrixXi& tempmat)
+{
+    size_t mat_size = possible_combs_.size();
+    std::vector<DiceThrow> & pos_list = possible_combs_;
+    size_t matIdx = 0;
+    std::vector<DiceIdx> mydiceanatomy = Helpers::transformDiceAnatomy(diceanatomy);
+    std::vector<DiceIdx> target_ability = Helpers::transformAbility(ability_name);
+    const auto& matrix = tempmat;
+
+    const auto& data = all_combs[number_dice_ - 1];
+
+    if (ability_name == "BIG" || ability_name == "SMALL")
+    {
+        //create possible list, with idx that has to be checked
+        std::vector<size_t> possible_idxs{};
+
+        if (ability_name == "BIG")
+        {
+            std::vector<DiceIdx> v{ 0,1,2,3,4 };
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            v = {1,2,3,4,5};
+            matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+        }
+        else
+        {
+            //bigs:
+            std::vector<DiceIdx> v{ 0,1,2,3,4 };
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            v = { 1,2,3,4,5 };
+            matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            //smalls:
+            v = { 0,1,2,3,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+            v = { 1,2,3,4,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+            v = { 2,3,4,5,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+        }
+
+        for (auto& dthrow : pos_list)
+        {
+            dthrow.success = false;
+
+            size_t hash_i = get_hash(dthrow);
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+
+            for (const auto & matrix_idx_j : possible_idxs)
+            {
+                if (matrix(matrix_idx_i, matrix_idx_j) != 0)
+                {
+                    dthrow.success = true;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+       
+        //create possible list, with idx that has to be checked
+        std::vector<size_t> possible_idxs{};
+        
+        for (size_t i = 0; i< data.combs_sorted.size(); i++)
+        {
+            std::vector<DiceIdx> current_ability{ 0,0,0,0,0,0 };
+            for (size_t j = 0; j < number_dice_; j++)
+            {
+                current_ability[mydiceanatomy[data.combs_sorted[i][j]]]++;
+            }
+            bool found = true;
+            for (size_t j = 0; j < target_ability.size(); j++)
+            {
+                if (target_ability[j] > current_ability[j])
+                {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+            {
+                possible_idxs.push_back(i);
+            }
+        }
+
+        for (auto& dthrow : pos_list)
+        {
+            dthrow.success = false;
+
+            size_t hash_i = get_hash(dthrow);
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+
+            for (const auto& matrix_idx_j : possible_idxs)
+            {
+                if (matrix(matrix_idx_i, matrix_idx_j) != 0)
+                {
+                    dthrow.success = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    
+    return ;
+}
+
+bool Simulator::read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
+{
+    std::vector<Card> cardscopy = cards;
+    size_t maxcp = 0;
+    size_t max_cards = cards.size();
+    for (const auto& c : cards)
+    {
+        maxcp += c.cp_cost;
+    }
+    size_t m_cp = std::min(cp, maxcp);
+    size_t m_cards = std::min(numbercards, max_cards);
+    if (m_cards == 0)
+    {
+        //we didnt save 0,0,0,0,0, 
+        // we calculated 1,0,0,0,0 0 1 = sixit active, but zero cp, and 1 card
+        cardscopy.clear();
+        cardscopy.push_back(Helpers::generateCard("sixit", 1));
+        m_cp = 0;
+        m_cards = 1;
+    }
+    std::stringstream ss;
+    ss << Helpers::get_cards_string(cardscopy) << " " << m_cp << " " << m_cards;
+
+    std::string searched_line = ss.str();
+    bool isDTA = false;
+    for (const auto& c : cardscopy)
+    {
+        if (c.lvl >= 2 || c.card_id == 5)
+        {
+            isDTA = true;
+            break;
+        }
+    }
+    //std::cout << table_name << " " << searched_line << std::endl;
+    bool sim4 = number_dice_ == 4;
+    std::string sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
+    if (sqlite_data == "")
+    {
+        return false;
+    }
+    
+    //create matrix from string:
+    size_t mat_size = possible_combs_.size();
+
+    Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
+    tempmat.setZero();
+    size_t mat_i = 0;
+    size_t mat_j = 0;
+    for (size_t idx = 0; idx < sqlite_data.size(); idx+=2)
+    {
+        if (sqlite_data[idx] == '1')
+        {
+            tempmat(mat_i, mat_j) = 1;
+        }
+        mat_j++;
+        if (mat_j >= mat_size)
+        {
+            mat_j = 0;
+            mat_i++;
+        }
+    }
+    
+    load_combs_from_matrix(ability_name, diceanatomy, tempmat);
+
+    //data is stored in possible_combs_ save it to possible_list_with_cheat_dt!
+    possible_list_with_cheat_dt = possible_combs_;
+    possible_list_with_cheat_dt_succ_only.clear();
+    bool straight = ability_name == "BIG" || ability_name == "SMALL";
+    bool is_big = ability_name == "BIG";
+
+    
+
+    //create list of dt that are only successfull with cards
+
+    bool sixit = false;
+    size_t sixit_cp = 1;
+    for (size_t i = 0; i < cards.size(); i++)
+    {
+        const auto& c = cards[i];
+        if (c.card_id == 0)
+        {
+            sixit = true;
+            sixit_cp = c.cp_cost;
+        }
+    }
+
+    for (size_t i = 0; i < possible_combs_.size(); i++)
+    {
+        const DiceThrow& dt = possible_combs_[i];
+        if (!dt.success)
+        {
+            continue;
+        }
+        if (dt.manipula[0].card != 0)
+        {
+            //manipulated are allways added
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            continue;
+        }
+        bool added = false;
+        if (straight && !is_big)
+        {
+            if (!is_big_straight(dt))
+            {
+                possible_list_with_cheat_dt_succ_only.push_back(dt);
+                added = true;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            added = true;
+        }
+        if (added && sixit && cp >= sixit_cp && numbercards >= 1 && possible_list_with_cheat_dt_succ_only.back().dice[number_dice_ - 1] == 5)
+        {
+            possible_list_with_cheat_dt_succ_only.back().rerollers[number_dice_ - 1] = true;
+        }
+    }
+
+    blowUpData();
+    loaded_all_ability_combinations_dt = all_ability_combinations_dt; // ONLY FOR TESTING
+
+    return true;
+}
+
 
 void Simulator::test_loaded_and_gen()
 {
