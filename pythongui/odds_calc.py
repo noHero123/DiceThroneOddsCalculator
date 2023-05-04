@@ -801,6 +801,10 @@ def run_norm_sim_exe(default, dices, rollatmps, rerolls):
     data.append(window['-2WILD-'].get())
     data.append("-swild")
     data.append(window['-SWILD-'].get())
+    data.append("-cheer")
+    data.append(window['-CHEER-'].get())
+    data.append("-probabilitymanipulation")
+    data.append(window['-PROBMANI-'].get())
     data.append("-cp")
     data.append(window['-CP-'].get())
     data.append("-cards")
@@ -849,6 +853,10 @@ def run_fallback_sim_exe(prime_obj, default, dices, rollatmps, rerolls):
     data.append(window['-2WILD-'].get())
     data.append("-swild")
     data.append(window['-SWILD-'].get())
+    data.append("-cheer")
+    data.append(window['-CHEER-'].get())
+    data.append("-probabilitymanipulation")
+    data.append(window['-PROBMANI-'].get())
     data.append("-cp")
     data.append(window['-CP-'].get())
     data.append("-cards")
@@ -1106,6 +1114,12 @@ def make_win1():
                        sg.Spin(values=('0','1', '2', '3', '4'), initial_value=0, font=("Helvetica", fontsize), size=(2, 1),enable_events=True, k='-2WILD-'),
                        sg.Text(' Slightly Wild-LvL:', font=("Helvetica", fontsize)),
                        sg.Spin(values=('0','1', '2', '3', '4'), initial_value=0, font=("Helvetica", fontsize), size=(2, 1),enable_events=True, k='-SWILD-'),
+                    ],
+                    [
+                       sg.Text('(3x)Cheer:', font=("Helvetica", fontsize)),
+                       sg.Spin(values=('0','1'), font=("Helvetica", fontsize),enable_events=True, k='-CHEER-'),
+                       sg.Text('Probability Manipulation:', font=("Helvetica", fontsize)),
+                       sg.Spin(values=('0','1', '2'), font=("Helvetica", fontsize),enable_events=True, k='-PROBMANI-'),
                     ],
                    [
                        sg.Text('Dice:', font=("Helvetica", fontsize)),
@@ -1843,6 +1857,10 @@ while True:             # Event Loop
    elif event == '-2WILD-':
        calcMaxCP()
    elif event == '-SWILD-':
+       calcMaxCP()
+   elif event == '-CHEER-':
+       calcMaxCP()
+   elif event == '-PROBMANI-':
        calcMaxCP()
    elif event == '-A1CHASE-':
        chaseability = 'A1'
