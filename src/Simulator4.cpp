@@ -838,10 +838,10 @@ void  Simulator4::test_odds_calc()
     size_t rerolls = 2;
     bool is_default_sim = false;
     CardData cardData{};
-    cardData.cp = 4;
+    /*cardData.cp = 4;
     cardData.lvlwild = 1;
     cardData.lvltip_it = 1;
-    cardData.use_max_cards = 2;
+    cardData.use_max_cards = 2;*/
 
     auto odds = oddsCalculator(abilities, diceanatomy, org_dice, roll_atemps, rerolls, is_default_sim, cardData);
     for (const auto odd : odds)
@@ -2681,13 +2681,12 @@ void Simulator4::precalc_ability_matrix_part(bool isDTA, size_t thread, size_t m
                 {
                     size_t count_to_delete = count_erg - 2;
                     size_t index_to_delete = matrices_data.size() + 1;
-                    std::cout << "thread " << thread << " saving matrices" << std::endl;
+                    std::cout << "thread " << thread << " saving matrices with "<<count_to_delete << " number of cards" << std::endl;
                     for (size_t i = 0; i < matrices_data.size(); i++)
                     {
                         if (matrices_data[i].number_cards <= count_to_delete)
                         {
                             //save matrice
-
                             save_matrix_to_sqlite(matrices_data[i], matrices[i], isDTA, thread);
                         }
 
@@ -2711,6 +2710,25 @@ void Simulator4::precalc_ability_matrix_part(bool isDTA, size_t thread, size_t m
 
             if (count_erg == 1)
             {
+                /*if (matrices_data.empty())
+                {
+                    size_t n = possible_combs_.size();
+                    Eigen::MatrixXi mat = Eigen::MatrixXi{ n, n };
+                    mat.setIdentity();
+                    Card c{};
+                    c.name = "sixit";
+
+                    card_matrices.emplace_back(c);
+                    basic_matrices.push_back(mat);
+                    matrices.emplace_back(mat);
+
+                    CardMatrixData mdata{};
+                    mdata.number_cards = 0;
+                    mdata.cards_combi = combi;
+                    mdata.cards_used = 0;
+                    matrices_data.emplace_back(mdata);
+                }*/
+
                 const auto& c = cards[0];
                 Eigen::MatrixXi mat = Eigen::MatrixXi(1, 1);
                 createCardMatrix(c, mat);
@@ -3306,6 +3324,7 @@ bool Simulator4::read_ability_matrix(std::string ability_name, std::string dicea
     {
         number_tokens += c.card_id >= 6 ? 1 : 0;
     }
+    bool need_data = true;
     if (m_cards == 0 && number_tokens == 0)
     {
         //we didnt save 0,0,0,0,0, 
@@ -3314,6 +3333,7 @@ bool Simulator4::read_ability_matrix(std::string ability_name, std::string dicea
         cardscopy.push_back(Helpers::generateCard("sixit", 1));
         m_cp = 0;
         m_cards = 1;
+        need_data = false;
     }
     std::stringstream ss;
     ss << Helpers::get_cards_string(cardscopy) << " " << m_cp << " " << m_cards;
@@ -3331,30 +3351,37 @@ bool Simulator4::read_ability_matrix(std::string ability_name, std::string dicea
     isDTA = false;//BECAUSE DTA CARDS ARE NOT ALLOWED
     //std::cout << table_name << " " << searched_line << std::endl;
     bool sim4 = true;
-    std::string sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
-    if (sqlite_data == "")
+    std::string sqlite_data = "";
+    if (need_data)
     {
-        return false;
+        sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
+        if (sqlite_data == "")
+        {
+            return false;
+        }
     }
 
     //create matrix from string:
     size_t mat_size = possible_combs_.size();
 
     Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
-    tempmat.setZero();
-    size_t mat_i = 0;
-    size_t mat_j = 0;
-    for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
+    tempmat.setIdentity();
+    if (need_data)
     {
-        if (sqlite_data[idx] == '1')
+        size_t mat_i = 0;
+        size_t mat_j = 0;
+        for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
         {
-            tempmat(mat_i, mat_j) = 1;
-        }
-        mat_j++;
-        if (mat_j >= mat_size)
-        {
-            mat_j = 0;
-            mat_i++;
+            if (sqlite_data[idx] == '1')
+            {
+                tempmat(mat_i, mat_j) = 1;
+            }
+            mat_j++;
+            if (mat_j >= mat_size)
+            {
+                mat_j = 0;
+                mat_i++;
+            }
         }
     }
 

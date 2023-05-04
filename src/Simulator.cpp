@@ -5416,6 +5416,7 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
     {
         number_tokens += c.card_id >= 6 ? 1 : 0;
     }
+    bool need_data = true;
     if (m_cards == 0 && number_tokens == 0)
     {
         //we didnt save 0,0,0,0,0, 
@@ -5424,6 +5425,7 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
         cardscopy.push_back(Helpers::generateCard("sixit", 1));
         m_cp = 0;
         m_cards = 1;
+        need_data = false;
     }
     std::stringstream ss;
     ss << Helpers::get_cards_string(cardscopy) << " " << m_cp << " " << m_cards;
@@ -5441,30 +5443,37 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
     isDTA = true;//BECAUSE WE CALCULATED EVERYTHING
     //std::cout << table_name << " " << searched_line << std::endl;
     bool sim4 = false;
-    std::string sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
-    if (sqlite_data == "")
+    std::string sqlite_data = "";
+    if (need_data)
     {
-        return false;
+        sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
+        if (sqlite_data == "")
+        {
+            return false;
+        }
     }
     
     //create matrix from string:
     size_t mat_size = possible_combs_.size();
 
     Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
-    tempmat.setZero();
-    size_t mat_i = 0;
-    size_t mat_j = 0;
-    for (size_t idx = 0; idx < sqlite_data.size(); idx+=2)
+    tempmat.setIdentity();
+    if (need_data)
     {
-        if (sqlite_data[idx] == '1')
+        size_t mat_i = 0;
+        size_t mat_j = 0;
+        for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
         {
-            tempmat(mat_i, mat_j) = 1;
-        }
-        mat_j++;
-        if (mat_j >= mat_size)
-        {
-            mat_j = 0;
-            mat_i++;
+            if (sqlite_data[idx] == '1')
+            {
+                tempmat(mat_i, mat_j) = 1;
+            }
+            mat_j++;
+            if (mat_j >= mat_size)
+            {
+                mat_j = 0;
+                mat_i++;
+            }
         }
     }
     

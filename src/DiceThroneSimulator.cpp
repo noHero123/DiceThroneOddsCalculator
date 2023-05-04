@@ -622,11 +622,12 @@ void commandLineCalculation(const InputParser & parser)
     }
 }
 
+
 void precalc_matrix(size_t thread, size_t max_thread)
 {
     DiceRoller dr{ 10 };
     bool calc_sim = false;
-    bool calc_dta = false; //should be false if calc_sim4 = true
+    bool calc_dta = true; //should be false if calc_sim4 = true
 
     bool calc_sim4 = true;
     if (calc_sim)
@@ -638,6 +639,7 @@ void precalc_matrix(size_t thread, size_t max_thread)
     }
     if (calc_sim4)
     {
+        calc_dta = false;
         Simulator4 sim4(dr);
         std::cout << "start thread " << thread << "##################################" << std::endl;
         sim4.precalc_matrix_ability(calc_dta, thread, max_thread);
@@ -645,6 +647,7 @@ void precalc_matrix(size_t thread, size_t max_thread)
     }
 }
 
+//use this to precalculate matrices
 void do_precalcs_matrix()
 {
     size_t max_workers = std::thread::hardware_concurrency();
@@ -654,7 +657,7 @@ void do_precalcs_matrix()
     }
     if (max_workers >= 4)
     {
-        max_workers -= 2;
+        max_workers -= 2;//because of RAM requirements (needs about 7GB per thread)
     }
     std::vector<std::future<void>> handles;
     std::chrono::milliseconds span(1000);
@@ -687,10 +690,10 @@ void do_precalc_test()
 
 }
 
-void finish_thread_matrixes(std::string path, std::string newdbname)
+//use this to fushin precalculates matrices to one
+void finish_thread_matrixes(std::string path)
 {
     std::string ext(".db");
-    std::string filenamenew = newdbname;
     std::vector<std::string> dbs;
     for (const auto& p : std::filesystem::recursive_directory_iterator(path))
     {
@@ -750,15 +753,6 @@ void finish_thread_matrixes(std::string path, std::string newdbname)
 
 int main(int argc, char* argv[])
 {
-    // TEST ####
-    //finish_thread_matrixes("./precalcs_matrix/", "MatrixDTA.db");
-    //return 0;
-    // TEST ####
-    // TEST ####
-    do_precalcs_matrix();
-    return 0;
-    // TEST ####
-
     if (argc > 1)
     {
         InputParser parser(argc, argv);
@@ -770,16 +764,9 @@ int main(int argc, char* argv[])
     bool do_tests = false;
     if (docalcs)
     {
+        // CODE for precalculating matrices. please delete matrices.db'S before doing another run (with 4 dice or DTA)
         do_precalcs_matrix();
-        
-        // DEPRECATED:
-        //precalc_all(false, "");
-        //writeTxtToDB();
-
-        // TESTING ##### 
-        //std::filesystem::create_directories("./precalcs4/");
-        //do_precalc("AAABBC", "SMALL"); //test
-        //writeTxtToDB("precalcs4", "DiceThroneOdds4.db");
+        //finish_thread_matrixes("./");
     }
     DiceRoller droller{ 5000ULL };
     if (do_tests)
@@ -799,6 +786,7 @@ int main(int argc, char* argv[])
         //sim4.test_odds_calc_chase();
         //sim4.combo_test();
         //sim.get_default_probability("Barbarian", false, false, false, false, false, 0, 0);
+        return 0;
     }
     run_server(droller);
     std::cout << "server stopped\n";
