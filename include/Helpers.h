@@ -39,7 +39,6 @@ public:
         }
         return (n * choose(n - 1, k - 1)) / k;
     }
-       
 
     std::string sqlite_get_data(std::string table_name, std::string search, bool isDTA, bool sim4 = false)
     {
@@ -360,7 +359,7 @@ public:
         int ret_code = 0;
         if ((ret_code = sqlite3_step(selectStmt)) != SQLITE_ROW)
         {
-            std::cout << "cant find " << table_name << std::endl;
+            std::cout << "cant find "<< search << " in " << table_name << std::endl;
             return "";
         }
         const unsigned char* txt_ptr = sqlite3_column_text(selectStmt, 1);

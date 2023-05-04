@@ -168,7 +168,8 @@ public:
 	void save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA, size_t thread);
 	void createCardMatrix(const Card& card, Eigen::MatrixXi& markovMatrix);
 	void calculateMatrices(const CardMatrixData& mdata, std::vector<CardMatrixData>& matrices_data, std::vector<Eigen::MatrixXi>& matrices, const std::vector<Card>& card_matrices, const std::vector<Eigen::MatrixXi>& basic_matrices);
-
+	void load_combs_from_matrix(std::string ability_name, std::string diceanatomy, const Eigen::MatrixXi& tempmat);
+	bool read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards);
 
 	//default one
 	bool find_keepers_comb_ultra_fast(std::vector<DiceIdx>& dice, std::vector<bool>& rerollers, bool randomize, bool just_one_reroll, const std::vector<DiceThrow>& all_combis);

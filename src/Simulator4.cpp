@@ -837,7 +837,11 @@ void  Simulator4::test_odds_calc()
     size_t roll_atemps = 3;
     size_t rerolls = 2;
     bool is_default_sim = false;
-    const CardData cardData{};
+    CardData cardData{};
+    cardData.cp = 4;
+    cardData.lvlwild = 1;
+    cardData.lvltip_it = 1;
+    cardData.use_max_cards = 2;
 
     auto odds = oddsCalculator(abilities, diceanatomy, org_dice, roll_atemps, rerolls, is_default_sim, cardData);
     for (const auto odd : odds)
@@ -935,7 +939,8 @@ std::vector<OddsResult> Simulator4::oddsCalculator(std::vector<std::string> abil
         ability_target_ = Helpers::transformAbility(ability);
 
         bool readed = false;
-        readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);
+        //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);
+        readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
         if (!readed)
         {
             std::vector<DiceIdx> mydiceanatomy = solver_anatomy_;
@@ -1002,7 +1007,8 @@ std::vector<OddsResult> Simulator4::oddsCalculatorChase(std::string ability, std
 
         bool readed = false;
 
-        readed = read_ability(abil, diceanatomy, cards, cp, use_max_cards);
+        //readed = read_ability(abil, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
+        readed = read_ability_matrix(abil, diceanatomy, cards, cp, use_max_cards);
 
         if (!readed)
         {
@@ -1853,7 +1859,8 @@ void Simulator4::combo_test()
 
     bool readed = false;
     auto start_time = std::chrono::high_resolution_clock::now();
-    readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);
+    //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
+    readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
     auto end_time = std::chrono::high_resolution_clock::now();
     auto time = end_time - start_time;
     std::cout << "reading took " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;
@@ -3142,6 +3149,278 @@ bool Simulator4::read_ability(std::string ability_name, std::string diceanatomy,
     return true;
 }
 
+void Simulator4::load_combs_from_matrix(std::string ability_name, std::string diceanatomy, const Eigen::MatrixXi& tempmat)
+{
+    size_t mat_size = possible_combs_.size();
+    std::vector<DiceThrow>& pos_list = possible_combs_;
+    size_t matIdx = 0;
+    std::vector<DiceIdx> mydiceanatomy = Helpers::transformDiceAnatomy(diceanatomy);
+    std::vector<DiceIdx> target_ability = Helpers::transformAbility(ability_name);
+    const auto& matrix = tempmat;
+
+    const auto& data = all_combs[number_dice_ - 1];
+
+    if (ability_name == "BIG" || ability_name == "SMALL")
+    {
+        //create possible list, with idx that has to be checked
+        std::vector<size_t> possible_idxs{};
+
+        if (ability_name == "BIG")
+        {
+            std::vector<DiceIdx> v{ 0,1,2,3,4 };
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            v = { 1,2,3,4,5 };
+            matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+        }
+        else
+        {
+            //bigs:
+            std::vector<DiceIdx> v{ 0,1,2,3,4 };
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            v = { 1,2,3,4,5 };
+            matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+            possible_idxs.push_back(matrix_idx_i);
+            //smalls:
+            v = { 0,1,2,3,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+            v = { 1,2,3,4,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+            v = { 2,3,4,5,0 };
+            for (size_t i = 0; i < 6; i++)
+            {
+                v[4] = i;
+                matrix_idx_i = data.dicehash_to_combs_sorted[get_hash(v)];
+                possible_idxs.push_back(matrix_idx_i);
+            }
+        }
+
+        for (auto& dthrow : pos_list)
+        {
+            dthrow.success = false;
+
+            size_t hash_i = get_hash(dthrow);
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+
+            for (const auto& matrix_idx_j : possible_idxs)
+            {
+                if (matrix(matrix_idx_i, matrix_idx_j) != 0)
+                {
+                    dthrow.success = true;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+
+        //create possible list, with idx that has to be checked
+        std::vector<size_t> possible_idxs{};
+
+        for (size_t i = 0; i < data.combs_sorted.size(); i++)
+        {
+            std::vector<DiceIdx> current_ability{ 0,0,0,0,0,0 };
+            for (size_t j = 0; j < number_dice_; j++)
+            {
+                current_ability[mydiceanatomy[data.combs_sorted[i][j]]]++;
+            }
+            bool found = true;
+            for (size_t j = 0; j < target_ability.size(); j++)
+            {
+                if (target_ability[j] > current_ability[j])
+                {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+            {
+                possible_idxs.push_back(i);
+            }
+        }
+
+        for (auto& dthrow : pos_list)
+        {
+            dthrow.success = false;
+
+            size_t hash_i = get_hash(dthrow);
+            size_t matrix_idx_i = data.dicehash_to_combs_sorted[hash_i];
+
+            for (const auto& matrix_idx_j : possible_idxs)
+            {
+                if (matrix(matrix_idx_i, matrix_idx_j) != 0)
+                {
+                    dthrow.success = true;
+                    break;
+                }
+            }
+        }
+    }
+
+
+    return;
+}
+
+bool Simulator4::read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
+{
+    bool straight = ability_name == "BIG" || ability_name == "SMALL";
+    if (straight)
+    {
+        if (number_dice_ != 5)
+        {
+            update_helper_data(5);
+        }
+    }
+    else
+    {
+        if (number_dice_ != 4)
+        {
+            update_helper_data(4);
+        }
+    }
+
+    std::vector<Card> cardscopy = cards;
+    size_t maxcp = 0;
+    size_t max_cards = cards.size();
+    for (const auto& c : cards)
+    {
+        maxcp += c.cp_cost;
+    }
+    size_t m_cp = std::min(cp, maxcp);
+    size_t m_cards = std::min(numbercards, max_cards);
+    size_t number_tokens = 0;
+    for (const auto& c : cards)
+    {
+        number_tokens += c.card_id >= 6 ? 1 : 0;
+    }
+    if (m_cards == 0 && number_tokens == 0)
+    {
+        //we didnt save 0,0,0,0,0, 
+        // we calculated 1,0,0,0,0 0 1 = sixit active, but zero cp, and 1 card
+        cardscopy.clear();
+        cardscopy.push_back(Helpers::generateCard("sixit", 1));
+        m_cp = 0;
+        m_cards = 1;
+    }
+    std::stringstream ss;
+    ss << Helpers::get_cards_string(cardscopy) << " " << m_cp << " " << m_cards;
+
+    std::string searched_line = ss.str();
+    bool isDTA = false;
+    for (const auto& c : cardscopy)
+    {
+        if (c.lvl >= 2 || c.card_id == 5)
+        {
+            isDTA = true;
+            break;
+        }
+    }
+    isDTA = false;//BECAUSE DTA CARDS ARE NOT ALLOWED
+    //std::cout << table_name << " " << searched_line << std::endl;
+    bool sim4 = true;
+    std::string sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
+    if (sqlite_data == "")
+    {
+        return false;
+    }
+
+    //create matrix from string:
+    size_t mat_size = possible_combs_.size();
+
+    Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
+    tempmat.setZero();
+    size_t mat_i = 0;
+    size_t mat_j = 0;
+    for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
+    {
+        if (sqlite_data[idx] == '1')
+        {
+            tempmat(mat_i, mat_j) = 1;
+        }
+        mat_j++;
+        if (mat_j >= mat_size)
+        {
+            mat_j = 0;
+            mat_i++;
+        }
+    }
+
+    load_combs_from_matrix(ability_name, diceanatomy, tempmat);
+
+    //data is stored in possible_combs_ save it to possible_list_with_cheat_dt!
+    possible_list_with_cheat_dt = possible_combs_;
+    possible_list_with_cheat_dt_succ_only.clear();
+    bool is_big = ability_name == "BIG";
+
+
+
+    //create list of dt that are only successfull with cards
+
+    bool sixit = false;
+    size_t sixit_cp = 1;
+    for (size_t i = 0; i < cards.size(); i++)
+    {
+        const auto& c = cards[i];
+        if (c.card_id == 0)
+        {
+            sixit = true;
+            sixit_cp = c.cp_cost;
+        }
+    }
+
+    for (size_t i = 0; i < possible_combs_.size(); i++)
+    {
+        const DiceThrow& dt = possible_combs_[i];
+        if (!dt.success)
+        {
+            continue;
+        }
+        if (dt.manipula[0].card != 0)
+        {
+            //manipulated are allways added
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            continue;
+        }
+        bool added = false;
+        if (straight && !is_big)
+        {
+            if (!is_big_straight(dt))
+            {
+                possible_list_with_cheat_dt_succ_only.push_back(dt);
+                added = true;
+            }
+        }
+        else
+        {
+            possible_list_with_cheat_dt_succ_only.push_back(dt);
+            added = true;
+        }
+        if (added && sixit && cp >= sixit_cp && numbercards >= 1 && possible_list_with_cheat_dt_succ_only.back().dice[number_dice_ - 1] == 5)
+        {
+            possible_list_with_cheat_dt_succ_only.back().rerollers[number_dice_ - 1] = true;
+        }
+    }
+
+    blowUpData();
+    loaded_all_ability_combinations_dt = all_ability_combinations_dt; // ONLY FOR TESTING
+
+    return true;
+}
+
+
 void Simulator4::test_loaded_and_gen()
 {
     size_t counter = 0;
@@ -3610,7 +3889,7 @@ int Simulator4::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxC
     size_t number_tokens = 0;
     for (const auto& c : card_store_[current_combo_store_idx])
     {
-        number_tokens += c.card_id >= 7 ? 1 : 0;
+        number_tokens += c.card_id >= 6 ? 1 : 0;
     }
     if ((useMaxCards == 0 && number_tokens == 0))
     {
@@ -4034,7 +4313,7 @@ bool Simulator4::fast_test(const std::vector<DiceIdx>& target, const DiceThrow& 
     for (const auto& c : cards)
     {
         number_cards_available += c.can_use ? 1 : 0;
-        number_tokens += c.card_id >= 7 ? 1 : 0;
+        number_tokens += c.card_id >= 6 ? 1 : 0;
     }
     if (use_max_cards == 0 && number_tokens == 0 || cards.empty())
     {

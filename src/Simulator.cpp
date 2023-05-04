@@ -1248,7 +1248,8 @@ std::vector<OddsResult> Simulator::oddsCalculator(std::vector<std::string> abili
 
         bool readed = false;
         
-        readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);
+        //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
+        readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
 
         if (!readed)
         {
@@ -1326,7 +1327,8 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
 
         bool readed = false;
 
-        readed = read_ability(abil, diceanatomy, cards, cp, use_max_cards);
+        //readed = read_ability(abil, diceanatomy, cards, cp, use_max_cards);
+        readed = read_ability_matrix(abil, diceanatomy, cards, cp, use_max_cards);
 
         if (!readed)
         {
@@ -2673,15 +2675,15 @@ void Simulator::combo_test()
 
     //SMALL; 0 2; 2 3; 3 2; 5 3; 1 3
     int cp = 10;
-    size_t use_max_cards = 0;
+    size_t use_max_cards = 2;
 
-    size_t sixit = 0;
-    size_t samesis = 0;
+    size_t sixit = 1;
+    size_t samesis = 1;
     size_t tip_it = 0;
     size_t wild = 0;
     size_t twiceWild = 0;
     size_t slightlyWild = 0;
-    size_t probManipulation = 2;
+    size_t probManipulation = 0;//TODO MATRIX READ AN PROB MANI
     size_t cheer = 0;
 
     if (!is_default_sim)
@@ -2733,7 +2735,8 @@ void Simulator::combo_test()
     
     bool readed = false;
     auto start_time = std::chrono::high_resolution_clock::now();
-    readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);
+    //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
+    readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
     auto end_time = std::chrono::high_resolution_clock::now();
     auto time = end_time - start_time;
     std::cout << "reading took " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;
@@ -5164,8 +5167,6 @@ void Simulator::precalc_ability_fast(std::string ability_name, const std::vector
     myfile.close();
 }
 
-
-
 bool Simulator::read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
 {
     std::string table_name = ability_name + "_" + diceanatomy;
@@ -5410,7 +5411,12 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
     }
     size_t m_cp = std::min(cp, maxcp);
     size_t m_cards = std::min(numbercards, max_cards);
-    if (m_cards == 0)
+    size_t number_tokens = 0;
+    for (const auto& c : cards)
+    {
+        number_tokens += c.card_id >= 6 ? 1 : 0;
+    }
+    if (m_cards == 0 && number_tokens == 0)
     {
         //we didnt save 0,0,0,0,0, 
         // we calculated 1,0,0,0,0 0 1 = sixit active, but zero cp, and 1 card
@@ -5432,8 +5438,9 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
             break;
         }
     }
+    isDTA = true;//BECAUSE WE CALCULATED EVERYTHING
     //std::cout << table_name << " " << searched_line << std::endl;
-    bool sim4 = number_dice_ == 4;
+    bool sim4 = false;
     std::string sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
     if (sqlite_data == "")
     {
@@ -5999,7 +6006,7 @@ int Simulator::test_all_combis(const DiceThrow& dice, size_t cp, size_t useMaxCa
     size_t number_tokens = 0;
     for (const auto& c : card_store_[current_combo_store_idx])
     {
-        number_tokens += c.card_id >= 7 ? 1 : 0;
+        number_tokens += c.card_id >= 6 ? 1 : 0;
     }
     if ((useMaxCards == 0 && number_tokens == 0))
     {
@@ -6418,7 +6425,7 @@ bool Simulator::fast_test(const std::vector<DiceIdx>& target, const DiceThrow& d
     for (const auto& c : cards)
     {
         number_cards_available += c.can_use ? 1 : 0;
-        number_tokens += c.card_id >= 7 ? 1:0;
+        number_tokens += c.card_id >= 6 ? 1:0;
     }
     if (use_max_cards == 0 && number_tokens == 0 || cards.empty())
     {
