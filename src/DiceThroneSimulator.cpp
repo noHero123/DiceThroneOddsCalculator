@@ -625,10 +625,10 @@ void commandLineCalculation(const InputParser & parser)
 void precalc_matrix(size_t thread, size_t max_thread)
 {
     DiceRoller dr{ 10 };
-    bool calc_sim = true;
-    bool calc_dta = true;
+    bool calc_sim = false;
+    bool calc_dta = false; //should be false if calc_sim4 = true
 
-    bool calc_sim4 = false;
+    bool calc_sim4 = true;
     if (calc_sim)
     {
         Simulator sim(dr);
@@ -640,8 +640,7 @@ void precalc_matrix(size_t thread, size_t max_thread)
     {
         Simulator4 sim4(dr);
         std::cout << "start thread " << thread << "##################################" << std::endl;
-        std::cout << "TODO" << std::endl;
-        //sim4.precalc_matrix_ability(calc_dta, thread, max_thread);
+        sim4.precalc_matrix_ability(calc_dta, thread, max_thread);
         std::cout << "thread " << thread << " ended ##################################" << std::endl;
     }
 }
@@ -688,11 +687,76 @@ void do_precalc_test()
 
 }
 
+void finish_thread_matrixes(std::string path, std::string newdbname)
+{
+    std::string ext(".db");
+    std::string filenamenew = newdbname;
+    std::vector<std::string> dbs;
+    for (const auto& p : std::filesystem::recursive_directory_iterator(path))
+    {
+        if (p.path().extension() == ext)
+        {
+            std::string filenameold = path + p.path().stem().string() + ext;
+            std::cout << p.path().stem().string() << '\n';
+            dbs.push_back(path + p.path().stem().string() + ext);
+        }   
+    }
+    if (dbs.empty())
+    {
+        return;
+    }
+    sqlite3* db;
+    sqlite3_open(dbs[0].c_str(), &db);
+
+    for (size_t i = 1; i < dbs.size(); i++)
+    {
+        std::string newdb = "new_db_" + std::to_string(i);
+        std::string createQuery = "ATTACH DATABASE '" + dbs[i] + "' as " + newdb;
+        std::cout << createQuery << std::endl;
+        sqlite3_stmt* createStmt;
+        std::cout << "attach Table Statement" << std::endl;
+        sqlite3_prepare(db, createQuery.c_str(), (int)createQuery.size(), &createStmt, NULL);
+        if (sqlite3_step(createStmt) != SQLITE_DONE)
+        {
+            std::cout << "Didn't attach Table!" << std::endl;
+            return;
+        }
+
+        std::string insertQuery = "INSERT OR REPLACE INTO main.DTMatrix SELECT * FROM " + newdb + ".DTMatrix;";
+        std::cout << insertQuery << std::endl;
+        sqlite3_stmt* insertStmt;
+        std::cout << "insert Table Statement" << std::endl;
+        sqlite3_prepare(db, insertQuery.c_str(), (int)insertQuery.size(), &insertStmt, NULL);
+        if (sqlite3_step(insertStmt) != SQLITE_DONE)
+        {
+            std::cout << "Didn't insert data!" << std::endl;
+            return;
+        }
+
+        std::string detachQuery = "DETACH DATABASE '"+newdb+"';";
+        std::cout << detachQuery << std::endl;
+        sqlite3_stmt* detachStmt;
+        std::cout << "detach Table Statement" << std::endl;
+        sqlite3_prepare(db, detachQuery.c_str(), (int)detachQuery.size(), &detachStmt, NULL);
+        if (sqlite3_step(detachStmt) != SQLITE_DONE)
+        {
+            std::cout << "Didn't detach Table!" << std::endl;
+            return;
+        }
+    }
+
+
+}
+
 int main(int argc, char* argv[])
 {
     // TEST ####
-    //do_precalcs_matrix();
+    //finish_thread_matrixes("./precalcs_matrix/", "MatrixDTA.db");
     //return 0;
+    // TEST ####
+    // TEST ####
+    do_precalcs_matrix();
+    return 0;
     // TEST ####
 
     if (argc > 1)

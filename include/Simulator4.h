@@ -19,15 +19,15 @@ class Simulator4
 	typedef  ORP4 ORPX;
 public:
 
-	size_t number_dice_ = 5;//4;
-	size_t possible_combs_blow_up_size_ = 7776;// 1296; // == 6^number_dice
+	size_t number_dice_ = 4;//4;
+	size_t possible_combs_blow_up_size_ = 1296;// 1296; // == 6^number_dice
 	size_t sixit_anz_ = number_dice_;
-	size_t samesis_anz_ = 20;//anz = 12;  == 2*(number_dice_ choose 2)
-	size_t samesis2_anz_ = 50; //anz = 24; == 2*(number_dice_ choose 2) + 3*(number_dice_ choose 3)
+	size_t samesis_anz_ = 12;//anz = 12;  == 2*(number_dice_ choose 2)
+	size_t samesis2_anz_ = 24; //anz = 24; == 2*(number_dice_ choose 2) + 3*(number_dice_ choose 3)
 	size_t tipit_anz_ = number_dice_ * 2;
 	size_t tipit2_anz_ = number_dice_ * 4;
 	size_t wilds_anz_ = number_dice_ * 6;
-	size_t twiceaswild_anz_ = 390;//anz = 240; == (number_dice_ choose 2)*36 + wilds_anz_
+	size_t twiceaswild_anz_ = 240;//anz = 240; == (number_dice_ choose 2)*36 + wilds_anz_
 	size_t slightlywild_anz_ = number_dice_ * 5;
 	size_t max_combo_store_size = twiceaswild_anz_;
 
@@ -142,6 +142,32 @@ public:
 	bool read_ability(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards);
 	void precalc_ability(std::string ability_name, const std::vector<DiceIdx>& target_ability, std::vector<DiceIdx>& mydiceanatomy, bool isDTA);
 	void precalc_ability(std::string ability, std::string diceanatomy);
+	void sort_combis(std::vector<std::vector<DiceIdx>>& erg);
+	void sort_combis2(std::vector<std::vector<DiceIdx>>& erg);
+	std::vector<std::vector<DiceIdx>> get_max_combis(const std::vector<std::vector<DiceIdx>>& erg);
+	std::vector<std::vector<DiceIdx>> get_all_sub_combs(std::vector<DiceIdx> data, bool isDTA);
+	std::vector<std::vector<size_t>> calc_all_permuts(const std::vector<Card>& cards, std::vector<size_t> v);
+
+	//precalc with matrixes
+	struct CardMatrixData
+	{
+		size_t cards_used = 0;
+		size_t cp_used = 0;
+		std::vector<DiceIdx> cards_combi = { 0,0,0,0,0,0,0,0 };
+		size_t number_cards = 0;
+
+		std::vector<Card> get_cards()
+		{
+			return Helpers::getCards(cards_combi[7], cards_combi[1], cards_combi[2], cards_combi[3], cards_combi[4], cards_combi[0], cards_combi[5], cards_combi[6]);
+		}
+	};
+
+	void precalc_matrix_ability(bool calc_dta, size_t thread, size_t max_threads);
+	void precalc_ability_matrix_part(bool isDTA, size_t thread, size_t max_threads);
+	bool has_matrix_data(const std::vector<DiceIdx>& combi, bool isDTA, bool sim4, size_t thread);
+	void save_matrix_to_sqlite(const CardMatrixData& mdata, const Eigen::MatrixXi& matrix, bool isDTA, size_t thread);
+	void createCardMatrix(const Card& card, Eigen::MatrixXi& markovMatrix);
+	void calculateMatrices(const CardMatrixData& mdata, std::vector<CardMatrixData>& matrices_data, std::vector<Eigen::MatrixXi>& matrices, const std::vector<Card>& card_matrices, const std::vector<Eigen::MatrixXi>& basic_matrices);
 
 
 	//default one
