@@ -574,7 +574,7 @@ public:
         if (hero_name == "Scarlet Witch")
         {
             diceanatomy = "AAABCD";
-            abilities = { "AAA", "AAAA", "AAAAA", "AABB", "CC","ABCD", "ADDD", "DDDD", "DDD", "BBC", "AAC" };
+            abilities = { "AAA", "AAAA", "AAAAA", "AABB", "CC","ABCD", "ADDD", "DDDD", "DDD", "BBC", "AAC", "DDDDD"};
         }
         if (hero_name == "Krampus")
         {

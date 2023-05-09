@@ -248,7 +248,7 @@ void precalc_all(bool do_target, std::string target)
 void run_server(DiceRoller& helper)
 {
 #ifdef _WIN32
-    DTServer server{ 80, helper};
+    DTServer server{ 8080, helper};
 #endif
 }
 
@@ -549,12 +549,12 @@ void commandLineCalculation(const InputParser & parser)
     if (parser.cmdOptionExists("-cheer"))
     {
         const std::string& out_s = parser.getCmdOption("-cheer");
-        slightlyWild = std::stoi(out_s);
+        cheer = std::stoi(out_s);
     }
     if (parser.cmdOptionExists("-probabilitymanipulation"))
     {
         const std::string& out_s = parser.getCmdOption("-probabilitymanipulation");
-        slightlyWild = std::stoi(out_s);
+        probabilityManipulation = std::stoi(out_s);
     }
     if (parser.cmdOptionExists("-cp"))
     {

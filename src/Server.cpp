@@ -253,7 +253,7 @@ DTServer::DTServer(int port, DiceRoller& helper) : simulator_{helper}, simulator
 	::bind(server, reinterpret_cast<SOCKADDR*>(&server_addr), sizeof(server_addr));
 	listen(server, 0);
 
-	cout << "Listening for incoming connections..." << endl;
+	cout << "Listening for incoming connections on port " << std::to_string(port) << " ..." << endl;
 
 	int client_addr_size = sizeof(client_addr);
 
