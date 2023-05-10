@@ -603,7 +603,7 @@ public:
             diceanatomy = "AABBCD";
             abilities = { "CC", "BBBD", "AAABB","AAAD", "DDDD", "DDDDD", "AAD", "AAB", "ABCD", "DDD" };
         }
-        if (hero_name == "Dr Strange")
+        if (hero_name == "Dr Strange" || hero_name == "Doctor Strange")
         {
             diceanatomy = "AABBCD";
             abilities = { "BBDD", "BBBB", "ABCD", "AACC", "DDDD","DDDDD" };
