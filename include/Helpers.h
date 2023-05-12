@@ -558,7 +558,7 @@ public:
         if (hero_name == "Santa")
         {
             diceanatomy = "AAABBC";
-            abilities = { "AAA","AAAA","AAAAA","BBBCC", "CCCC", "BBBB", "AABBC", "AABB", "CCC", "CCCCC"};
+            abilities = { "AAA","AAAA","AAAAA","AAACC", "CCCC", "BBBB", "AABBC", "AABB", "CCC", "CCCCC"};
         }
 
         if (hero_name == "Seraph")
