@@ -153,7 +153,7 @@ public:
 	void precalc_matrix_ability(bool calc_dta, size_t thread, size_t max_threads);
 	void precalc_ability_matrix_part(bool isDTA, size_t thread, size_t max_threads);
 	void load_combs_from_matrix(std::string ability_name, std::string diceanatomy, const Eigen::MatrixXi& tempmat);
-	bool read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards);
+	bool read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards, Eigen::MatrixXi& return_mat);
 
 
 	//default one

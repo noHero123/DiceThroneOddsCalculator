@@ -1017,14 +1017,7 @@ std::vector<OddsResult> Simulator4::oddsCalculatorChase(std::string ability, std
             std::cout << "Ability " << abil << " not found in DB, please generate its lookup-data, then calculations will speed up alot " << std::endl;
             get_all_positive_combs(mydiceanatomy, target_ability, cards, cp, use_max_cards);
         }
-        ChaseData cd{};
-        cd.ability = abil;
-        cd.amount = 0U;
-        cd.possible_list_with_cheat_dt = this->possible_list_with_cheat_dt;
-        cd.all_ability_combinations_dt = this->all_ability_combinations_dt;
-        cd.all_ability_combinations_no_cards_dt = this->all_ability_combinations_no_cards_dt;
-        cd.erg = 0.0F;
-        chase_data_.emplace_back(cd);
+        chase_data_.push_back({ abil, 0U, 0.0F, this->possible_list_with_cheat_dt, this->all_ability_combinations_dt, {} });
     };
     helper.closeDB();
     auto end_time = std::chrono::high_resolution_clock::now();

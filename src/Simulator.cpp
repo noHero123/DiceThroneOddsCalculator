@@ -1234,11 +1234,12 @@ std::vector<OddsResult> Simulator::oddsCalculator(std::vector<std::string> abili
 {
     std::vector<OddsResult> results{};
     bool aggressive = false;
+    Eigen::MatrixXi return_mat = Eigen::MatrixXi::Zero(1,1);
     chase_data_.clear();
     int cp = cardData.cp;
     size_t use_max_cards = cardData.use_max_cards;
     std::vector<Card> cards = Helpers::getCards(cardData.lvlsixit, cardData.lvlsamesis, cardData.lvltip_it, cardData.lvlwild, cardData.lvltwiceWild, cardData.lvlslightlyWild, cardData.numberProbabilityManipulation, cardData.hasCheer);
-    
+    std::chrono::duration<long long, std::nano> read_time{0};
     auto start_time = std::chrono::high_resolution_clock::now();
 
     solver_anatomy_ = Helpers::transformDiceAnatomy(diceanatomy);
@@ -1249,7 +1250,10 @@ std::vector<OddsResult> Simulator::oddsCalculator(std::vector<std::string> abili
         bool readed = false;
         
         //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
-        readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
+        auto start_time_read = std::chrono::high_resolution_clock::now();
+        readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards, return_mat);
+        auto end_time_read = std::chrono::high_resolution_clock::now();
+        read_time = read_time + (end_time_read - start_time_read);
 
         if (!readed)
         {
@@ -1284,6 +1288,7 @@ std::vector<OddsResult> Simulator::oddsCalculator(std::vector<std::string> abili
     auto end_time = std::chrono::high_resolution_clock::now();
     auto time = end_time - start_time;
     std::cout << "calculation done in " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;
+    std::cout << "reading done in " << (read_time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;
     return results;
 }
 
@@ -1291,6 +1296,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
 {
     chase_data_.clear();
     float erg = 0.0F;
+    Eigen::MatrixXi return_mat = Eigen::MatrixXi::Zero(1, 1);
     std::vector<bool> best_rerolls{true, true, true, true, true};
     if (number_dice_ == 4)
     {
@@ -1319,6 +1325,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
     }
     abilities_temp.push_back(ability);
     
+    chase_data_.reserve(abilities_temp.size());
 
     //get data for all abilities
     for (const auto& abil : abilities_temp)
@@ -1328,7 +1335,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
         bool readed = false;
 
         //readed = read_ability(abil, diceanatomy, cards, cp, use_max_cards);
-        readed = read_ability_matrix(abil, diceanatomy, cards, cp, use_max_cards);
+        readed = read_ability_matrix(abil, diceanatomy, cards, cp, use_max_cards, return_mat);
 
         if (!readed)
         {
@@ -1337,14 +1344,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
             std::cout << "Ability " << abil << " not found in DB, please generate its lookup-data, then calculations will speed up alot " << std::endl;
             get_all_positive_combs(mydiceanatomy, target_ability, cards, cp, use_max_cards);
         }
-        ChaseData cd{};
-        cd.ability = abil;
-        cd.amount = 0U;
-        cd.possible_list_with_cheat_dt = this->possible_list_with_cheat_dt;
-        cd.all_ability_combinations_dt = this->all_ability_combinations_dt;
-        cd.all_ability_combinations_no_cards_dt = this->all_ability_combinations_no_cards_dt;
-        cd.erg = 0.0F;
-        chase_data_.emplace_back(cd);
+        chase_data_.push_back({ abil, 0U, 0.0F, this->possible_list_with_cheat_dt, this->all_ability_combinations_dt, {}});
     };
     helper.closeDB();
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -1375,7 +1375,7 @@ std::vector<OddsResult> Simulator::oddsCalculatorChase(std::string ability, std:
     time = end_time - start_time;
     std::cout << "simulation calculation done in " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;*/
 
-    start_time = std::chrono::high_resolution_clock::now();
+    //start_time = std::chrono::high_resolution_clock::now();
     best_rerolls = createMarkovChainSolverEigenRow(org_dice, is_default_sim, roll_atemps, rerolls, diceanatomy, ability, cards, erg);
     end_time = std::chrono::high_resolution_clock::now();
     time = end_time - start_time;
@@ -2657,6 +2657,7 @@ void Simulator::combo_test()
 {
     //test_random_gens();
     bool test_read_and_calc = false;
+    Eigen::MatrixXi return_mat = Eigen::MatrixXi::Zero(1, 1);
     std::vector<DiceIdx> org_dice{ 0,1,3,3,3 };
     //org_dice = { 0,1,2,4,4 };
     std::string ability = "BIG";
@@ -2736,7 +2737,7 @@ void Simulator::combo_test()
     bool readed = false;
     auto start_time = std::chrono::high_resolution_clock::now();
     //readed = read_ability(ability, diceanatomy, cards, cp, use_max_cards);//DEPRECATED
-    readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards);
+    readed = read_ability_matrix(ability, diceanatomy, cards, cp, use_max_cards, return_mat);
     auto end_time = std::chrono::high_resolution_clock::now();
     auto time = end_time - start_time;
     std::cout << "reading took " << (time / std::chrono::milliseconds(1)) / 1000.0 << " seconds" << std::endl;
@@ -5400,7 +5401,7 @@ void Simulator::load_combs_from_matrix(std::string ability_name, std::string dic
     return ;
 }
 
-bool Simulator::read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards)
+bool Simulator::read_ability_matrix(std::string ability_name, std::string diceanatomy, const std::vector<Card>& cards, size_t cp, size_t numbercards, Eigen::MatrixXi& return_mat)
 {
     std::vector<Card> cardscopy = cards;
     size_t maxcp = 0;
@@ -5443,41 +5444,52 @@ bool Simulator::read_ability_matrix(std::string ability_name, std::string dicean
     isDTA = true;//BECAUSE WE CALCULATED EVERYTHING
     //std::cout << table_name << " " << searched_line << std::endl;
     bool sim4 = false;
-    std::string sqlite_data = "";
-    if (need_data)
-    {
-        sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
-        if (sqlite_data == "")
-        {
-            return false;
-        }
-    }
-    
-    //create matrix from string:
     size_t mat_size = possible_combs_.size();
-
-    Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
-    tempmat.setIdentity();
-    if (need_data)
+    if (return_mat.rows() != mat_size)
     {
-        size_t mat_i = 0;
-        size_t mat_j = 0;
-        for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
+        std::string sqlite_data = "";
+        if (need_data)
         {
-            if (sqlite_data[idx] == '1')
+            sqlite_data = helper.sqlite_get_matrix_data(searched_line, isDTA, sim4);
+            if (sqlite_data == "")
             {
-                tempmat(mat_i, mat_j) = 1;
-            }
-            mat_j++;
-            if (mat_j >= mat_size)
-            {
-                mat_j = 0;
-                mat_i++;
+                return false;
             }
         }
+
+        //create matrix from string:
+        
+
+        Eigen::MatrixXi tempmat = Eigen::MatrixXi(mat_size, mat_size);
+        tempmat.setIdentity();
+        if (need_data)
+        {
+            size_t mat_i = 0;
+            size_t mat_j = 0;
+            for (size_t idx = 0; idx < sqlite_data.size(); idx += 2)
+            {
+                if (sqlite_data[idx] == '1')
+                {
+                    tempmat(mat_i, mat_j) = 1;
+                }
+                mat_j++;
+                if (mat_j >= mat_size)
+                {
+                    mat_j = 0;
+                    mat_i++;
+                }
+            }
+        }
+
+        load_combs_from_matrix(ability_name, diceanatomy, tempmat);
+        return_mat = tempmat;
     }
+    else
+    {
+        load_combs_from_matrix(ability_name, diceanatomy, return_mat);
+    }
+
     
-    load_combs_from_matrix(ability_name, diceanatomy, tempmat);
 
     //data is stored in possible_combs_ save it to possible_list_with_cheat_dt!
     possible_list_with_cheat_dt = possible_combs_;
