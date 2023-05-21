@@ -11,21 +11,33 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
-#include <filesystem> // c++17
-
 #ifdef _WIN32
-#include "sqlite3.h"
+#include <filesystem> // c++17
+#else
+#ifndef __has_include
+  static_assert(false, "__has_include not supported");
+#else
+#  if __cplusplus >= 201703L && __has_include(<filesystem>)
+#    include <filesystem>
+     namespace fs = std::filesystem;
+#  elif __has_include(<experimental/filesystem>)
+#    include <experimental/filesystem>
+     namespace fs = std::experimental::filesystem;
+#  elif __has_include(<boost/filesystem.hpp>)
+#    include <boost/filesystem.hpp>
+     namespace fs = boost::filesystem;
+#  endif
 #endif
+#endif
+
+#include "sqlite3.h"
 
 #include "FasterRandomGenerator.h"
 #include "Simulator.h"
 #include "Simulator4.h"
 #include "Zipper.h"
 #include "InputParser.h"
-
-#ifdef _WIN32
 #include "Server.h"
-#endif
 
 
 void do_precalc(std::string anatomy, std::string ability)
@@ -238,18 +250,16 @@ std::vector<std::pair< std::string, std::string>> get_precalc_vector()
 
 void precalc_all(bool do_target, std::string target)
 {
-    std::filesystem::create_directories("./precalcsDTA/");
-    std::filesystem::create_directories("./precalcs4/");
-    std::filesystem::create_directories("./precalcs/");
+    fs::create_directories("./precalcsDTA/");
+    fs::create_directories("./precalcs4/");
+    fs::create_directories("./precalcs/");
     std::vector<std::pair< std::string, std::string>> all_data = get_precalc_vector();
     precalc_abilitys(all_data);
 }
 
 void run_server(DiceRoller& helper)
 {
-#ifdef _WIN32
     DTServer server{ 8080, helper};
-#endif
 }
 
 bool does_file_exists(const std::string& name) {
@@ -695,7 +705,7 @@ void finish_thread_matrixes(std::string path)
 {
     std::string ext(".db");
     std::vector<std::string> dbs;
-    for (const auto& p : std::filesystem::recursive_directory_iterator(path))
+    for (const auto& p : fs::recursive_directory_iterator(path))
     {
         if (p.path().extension() == ext)
         {

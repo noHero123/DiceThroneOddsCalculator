@@ -5,6 +5,7 @@
 #include <sstream>      // std::stringstream
 
 #include <Eigen/Dense>
+#include <unordered_map>
 
 //#include "RandomGenerator.h"
 #include "Types.h"

@@ -16,3 +16,10 @@ numbers in brackets are the dice you have to reroll for maximized odds.
 - download latest release from: https://github.com/noHero123/DiceThroneOddsCalculator/releases and extract it.
 - (optional) if you want to use the odds calculator for DTA, also download the precomputed database from https://github.com/noHero123/DiceThroneOddsCalculator/releases/tag/1.0.0_DTA and extract it to the same folder like the stuff from first step.
 - start odds_calc.exe
+
+
+### compile with linux
+-install eigen + sqlite:
+sudo apt-get install libeigen3-dev
+sudo apt-get install libsqlite3-dev
+

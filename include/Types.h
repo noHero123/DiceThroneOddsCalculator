@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream> 
 #include <vector>
+#include <algorithm>
 #include <iomanip> //setprecision
 
 typedef unsigned char DiceIdx;

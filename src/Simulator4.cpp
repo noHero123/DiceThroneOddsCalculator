@@ -1391,7 +1391,7 @@ std::vector<bool> Simulator4::createMarkovChainSolverEigen(const std::vector<Dic
 
     // get optimized rerollers:
     float temp_erg = 0.0F;
-    size_t temp_rerollers = std::min(roll_atempts, 2ULL);
+    size_t temp_rerollers = std::min(roll_atempts, static_cast<size_t>(2));
     if (rerolls >= 2)
     {
         temp_rerollers = 2;

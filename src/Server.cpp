@@ -1,5 +1,6 @@
 #include <future>
 #include <iostream>
+#include <stdio.h>
 
 #include "Types.h"
 #include "Server.h"
@@ -20,13 +21,21 @@ void DTServer::send_to_client_test()
 void DTServer::send_to_client(std::string message, int port)
 {
 	//cout << "send:"<<endl << message << endl;
+
+#ifdef _WIN32
 	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
 	SOCKADDR_IN addr;
 
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
-	const auto sender = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
+	
+	const auto sender = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+#ifdef _WIN32
 	auto blah = InetPton(AF_INET, (PCWSTR)("127.0.0.1"), &addr.sin_addr.s_addr);
+#else
+	auto blah = inet_pton(AF_INET, ("127.0.0.1"), &addr.sin_addr.s_addr);
+#endif
 	//cout << " port "<< port << endl;
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
@@ -38,7 +47,9 @@ void DTServer::send_to_client(std::string message, int port)
 		
 	}
 	closesocket(sender);
+#ifdef _WIN32
 	WSACleanup();
+#endif
 	//cout << "Socket closed." << endl << endl;
 }
 
@@ -64,7 +75,11 @@ std::string urlDecode(std::string& SRC) {
 	int i, ii;
 	for (i = 0; i < SRC.length(); i++) {
 		if (SRC[i] == '%') {
+#ifdef _WIN32
 			sscanf_s(SRC.substr(i + 1, 2).c_str(), "%x", &ii);
+#else
+			sscanf(SRC.substr(i + 1, 2).c_str(), "%x", &ii);
+#endif
 			ch = static_cast<char>(ii);
 			ret += ch;
 			i = i + 2;
@@ -240,10 +255,12 @@ void DTServer::on_client_connect(SOCKET client)
 
 DTServer::DTServer(int port, DiceRoller& helper) : simulator_{helper}, simulator4_{ helper }
 {
+	cout << "start server..." << endl;
+#ifdef _WIN32
 	WSADATA wsa_data;
-	SOCKADDR_IN server_addr, client_addr;
-
 	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif	
+	SOCKADDR_IN server_addr, client_addr;
 	const auto server = socket(AF_INET, SOCK_STREAM, 0);
 
 	server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -255,7 +272,7 @@ DTServer::DTServer(int port, DiceRoller& helper) : simulator_{helper}, simulator
 
 	cout << "Listening for incoming connections on port " << std::to_string(port) << " ..." << endl;
 
-	int client_addr_size = sizeof(client_addr);
+	unsigned int client_addr_size = sizeof(client_addr);
 
 	for (;;)
 	{
@@ -267,11 +284,13 @@ DTServer::DTServer(int port, DiceRoller& helper) : simulator_{helper}, simulator
 			auto fut = async(launch::async, &DTServer::on_client_connect, this, client);
 		}
 
+#ifdef _WIN32
 		const auto last_error = WSAGetLastError();
 
 		if (last_error > 0)
 		{
 			cout << "Error: " << last_error << endl;
 		}
+#endif	
 	}
 }

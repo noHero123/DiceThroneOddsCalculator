@@ -3,6 +3,7 @@
 #include <chrono>
 #include <random>
 #include <sstream>      // std::stringstream
+#include <unordered_map>
 
 #include <Eigen/Dense>
 
