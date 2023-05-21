@@ -1,7 +1,7 @@
 appname := oddscalculator
 
 CXX := g++
-CXXFLAGS := -g -O3 -std=c++17 -pthread -lstdc++fs -I/usr/include/eigen3 -I include -L/usr/lib/x86_64-linux-gnu -L/usr/boost/
+CXXFLAGS := -g -O3 -std=c++17 -pthread -lstdc++fs -I/usr/include/eigen3 -I include -L/usr/lib/x86_64-linux-gnu -L/usr/boost/ -no-pie
 LDFLAGS := 
 
 LDLIBS := -lsqlite3 -lboost_iostreams -lstdc++fs
