@@ -19,7 +19,24 @@ numbers in brackets are the dice you have to reroll for maximized odds.
 
 
 ### compile with linux
--install eigen + sqlite:
+install eigen + sqlite + boost:
+```
 sudo apt-get install libeigen3-dev
 sudo apt-get install libsqlite3-dev
+sudo apt-get install libboost-all-dev
+```
+
+load github-project:
+- create a new folder
+- go inside the folder
+- open terminal and run
+```
+git clone https://github.com/noHero123/DiceThroneOddsCalculator.git
+```
+go inside the folder (the folder with the makefile)
+open terminal and run
+```
+make
+```
+
 
