@@ -1,11 +1,9 @@
 appname := oddscalculator
 
 CXX := g++
-CXXFLAGS := -g -O3 -std=c++17 -pthread -lstdc++fs -I/usr/include/eigen3 -I include -L/usr/lib/x86_64-linux-gnu -L/usr/boost/ -no-pie
+CXXFLAGS := -g -O3 -std=c++17 -pthread -I/usr/include/eigen3 -I include -L/usr/lib/x86_64-linux-gnu -L/usr/include/boost/
 LDFLAGS := 
-
-LDLIBS := -lsqlite3 -lboost_iostreams -lstdc++fs
-
+LDLIBS := -static -lboost_iostreams  -lsqlite3 -lstdc++fs -ldl -lz
 srcfiles := $(shell find . -maxdepth 10 -name "*.cpp")
 objects  := $(patsubst %.cpp, %.o, $(srcfiles))
 $(info $$srcfiles is [${srcfiles}])
