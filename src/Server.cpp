@@ -271,8 +271,11 @@ DTServer::DTServer(int port, DiceRoller& helper) : simulator_{helper}, simulator
 	listen(server, 0);
 
 	cout << "Listening for incoming connections on port " << std::to_string(port) << " ..." << endl;
-
+#ifdef _WIN32
+	int client_addr_size = sizeof(client_addr);
+#else
 	unsigned int client_addr_size = sizeof(client_addr);
+#endif
 
 	for (;;)
 	{

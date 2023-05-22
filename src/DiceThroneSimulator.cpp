@@ -13,6 +13,7 @@
 #include <thread>
 #ifdef _WIN32
 #include <filesystem> // c++17
+namespace fs = std::filesystem;
 #else
 #ifndef __has_include
   static_assert(false, "__has_include not supported");
