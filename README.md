@@ -19,7 +19,7 @@ numbers in brackets are the dice you have to reroll for maximized odds.
 
 
 ### compile with linux
-install eigen + sqlite + boost:
+install eigen + sqlite + boost (and if you dont have: git, make and g++):
 ```
 sudo apt-get install libeigen3-dev
 sudo apt-get install libsqlite3-dev
