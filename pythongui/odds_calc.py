@@ -867,6 +867,10 @@ def run_fallback_sim_exe(prime_obj, default, dices, rollatmps, rerolls):
     data.append(anatomy)
     data.append("-chase")
     data.append(chased_abil)
+    scarlett = window['-SCARLETT-'].get()
+    if scarlett:
+        data.append("-scarlett")
+        data.append("true")
     print(data)
     result = subprocess.run(data, stdout=subprocess.PIPE)
     output = result.stdout.decode('utf-8')
